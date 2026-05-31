@@ -106,18 +106,6 @@
       text-align: center;
     }
 
-    .logo-icon {
-      font-size: 48px;
-      margin-bottom: 12px;
-      filter: drop-shadow(0 0 20px rgba(192,57,43,0.6));
-      animation: pulse-glow 2s ease-in-out infinite alternate;
-    }
-
-    @keyframes pulse-glow {
-      from { filter: drop-shadow(0 0 16px rgba(192,57,43,0.5)); }
-      to   { filter: drop-shadow(0 0 28px rgba(192,57,43,0.9)); }
-    }
-
     .app-title {
       font-family: var(--font-head);
       font-size: 56px;
@@ -139,7 +127,7 @@
       display: flex;
       gap: 16px;
       width: 100%;
-      max-width: 320px;
+      max-width: 360px;
     }
 
     .user-card {
@@ -147,29 +135,42 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 10px;
-      padding: 24px 16px;
+      gap: 0;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 16px;
+      border-radius: 20px;
+      overflow: hidden;
       transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+      padding: 0;
     }
 
     .user-card:active {
-      transform: scale(0.96);
+      transform: scale(0.97);
       border-color: var(--red);
-      box-shadow: 0 0 20px rgba(192,57,43,0.3);
+      box-shadow: 0 0 24px rgba(192,57,43,0.3);
     }
 
-    .user-avatar {
-      font-size: 36px;
+    .photo-wrap {
+      width: 100%;
+      aspect-ratio: 3 / 4;
+      overflow: hidden;
+      background: #0a0a0a;
+    }
+
+    .user-photo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top center;
+      display: block;
     }
 
     .user-name {
       font-family: var(--font-head);
       font-size: 22px;
-      letter-spacing: 2px;
+      letter-spacing: 3px;
       color: var(--white);
+      padding: 12px 0 14px;
     }
 
     /* =====================================================
@@ -473,7 +474,37 @@
     }
 
     /* =====================================================
-       MOOD PICKER MODAL
+       LOGGED TAGS
+    ===================================================== */
+    .ex-logged-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 5px;
+      flex-wrap: wrap;
+    }
+
+    .logged-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      padding: 3px 7px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.05em;
+      color: var(--dim);
+    }
+
+    .logged-tag svg { flex-shrink: 0; }
+
+    .effort-easy    { color: var(--green); border-color: rgba(39,174,96,0.3); }
+    .effort-neutral { color: #f0a500; border-color: rgba(240,165,0,0.3); }
+    .effort-hard    { color: var(--red); border-color: rgba(192,57,43,0.3); }
+
+    /* =====================================================
+       PICKER MODALS (EFFORT + SETS)
     ===================================================== */
     .modal-overlay {
       position: fixed;
@@ -510,38 +541,47 @@
       margin-bottom: 24px;
     }
 
-    .mood-grid {
+    .pick-grid {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 8px;
+      gap: 10px;
       margin-bottom: 16px;
     }
 
-    .mood-btn {
+    .pick-grid.three { grid-template-columns: repeat(3, 1fr); }
+    .pick-grid.two   { grid-template-columns: repeat(2, 1fr); }
+
+    .pick-btn {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 6px;
+      gap: 10px;
       background: var(--surface2);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px 4px;
+      border-radius: 14px;
+      padding: 20px 8px 16px;
       transition: transform 0.1s, border-color 0.15s, background 0.15s;
     }
 
-    .mood-btn:active {
-      transform: scale(0.92);
+    .pick-btn:active {
+      transform: scale(0.93);
       border-color: var(--red);
-      background: rgba(192,57,43,0.1);
+      background: rgba(192,57,43,0.08);
     }
 
-    .mood-emoji { font-size: 24px; }
-    .mood-label {
+    .pick-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--white);
+    }
+
+    .pick-label {
       font-family: var(--font-mono);
-      font-size: 9px;
-      letter-spacing: 0.05em;
+      font-size: 11px;
+      letter-spacing: 0.1em;
       color: var(--dim);
       text-align: center;
+      text-transform: uppercase;
     }
 
     .cancel-btn {
