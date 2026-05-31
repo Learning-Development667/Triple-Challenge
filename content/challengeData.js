@@ -1,7 +1,7 @@
 // 30 Day Triple Challenge — Full Programme Data
 // Start date: 22 May 2026 — Day 9 is 1 June 2026
 
-const CHALLENGE_START = new Date('2026-05-22');
+const CHALLENGE_START = new Date('2026-05-23');
 
 const CHALLENGE_DATA = {
   month1: {
