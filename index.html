@@ -600,11 +600,12 @@
     }
 
     /* =====================================================
-       PROGRESS VIEW
+       PROGRESS VIEW — CARD LAYOUT
     ===================================================== */
     .prog-tabs {
       display: flex;
       gap: 8px;
+      flex-shrink: 0;
     }
 
     .prog-tab {
@@ -636,67 +637,117 @@
       margin-bottom: 10px;
     }
 
-    .prog-table-wrap { }
-
-    .table-scroll {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
+    .prog-day-card {
+      background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 8px;
     }
 
-    .prog-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 12px;
-      min-width: 380px;
+    .prog-day-card.prog-today {
+      border-color: rgba(192,57,43,0.5);
     }
 
-    .prog-table th {
+    .prog-day-card.prog-past {
+      opacity: 0.7;
+    }
+
+    .prog-day-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
       background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .prog-day-num {
+      font-family: var(--font-head);
+      font-size: 16px;
+      letter-spacing: 1px;
+      color: var(--white);
+    }
+
+    .prog-today .prog-day-num { color: var(--red); }
+
+    .prog-day-date {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      color: var(--dim);
+    }
+
+    .prog-ex-rows {
+      padding: 4px 12px 8px;
+    }
+
+    .prog-ex-header {
+      display: grid;
+      grid-template-columns: 1fr 72px 72px;
+      padding: 6px 0 4px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 4px;
+    }
+
+    .prog-user-label {
       font-family: var(--font-mono);
       font-size: 9px;
       letter-spacing: 0.15em;
       color: var(--red);
-      text-transform: uppercase;
-      padding: 8px 6px;
       text-align: center;
+    }
+
+    .prog-ex-row {
+      display: grid;
+      grid-template-columns: 1fr 72px 72px;
+      align-items: center;
+      padding: 5px 0;
       border-bottom: 1px solid var(--border);
     }
 
-    .prog-table th:first-child { text-align: left; padding-left: 12px; }
+    .prog-ex-row:last-child { border-bottom: none; }
 
-    .sub-header th {
-      color: var(--dim) !important;
-      font-size: 8px !important;
-      padding: 4px 6px !important;
+    .prog-ex-row.rest { opacity: 0.4; }
+
+    .prog-ex-name {
+      font-size: 12px;
+      color: var(--white);
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
     }
 
-    .prog-table td {
-      padding: 7px 6px;
-      text-align: center;
-      border-bottom: 1px solid var(--border);
+    .prog-target {
+      font-family: var(--font-mono);
+      font-size: 10px;
       color: var(--dim);
+      display: block;
+    }
+
+    .prog-rest-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.05em;
+      color: var(--dim);
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .prog-done-cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      color: var(--green);
+    }
+
+    .prog-empty-cell {
       font-family: var(--font-mono);
       font-size: 11px;
+      color: var(--border2);
+      text-align: center;
     }
-
-    .prog-table tr:last-child td { border-bottom: none; }
-
-    .day-cell {
-      text-align: left !important;
-      padding-left: 12px !important;
-      color: var(--white) !important;
-      font-weight: 500;
-    }
-
-    .target-cell { color: var(--white) !important; }
-    .done-cell { color: var(--green) !important; }
-    .rest-cell { color: var(--border2) !important; }
-
-    .today-row td { background: rgba(192,57,43,0.06); }
-    .today-row .day-cell { color: var(--red) !important; }
-    .past-row { opacity: 0.6; }
 
     /* =====================================================
        STATS
@@ -1102,12 +1153,75 @@
       padding-top: 1px;
     }
 
+    .breakdown-hint {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: var(--dim);
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .breakdown-presets {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      justify-content: center;
+    }
+
+    .preset-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: var(--dim);
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .preset-btn:active { border-color: var(--red); color: var(--white); }
+
+    .breakdown-input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      padding: 14px 16px;
+      color: var(--white);
+      font-size: 22px;
+      font-family: var(--font-mono);
+      letter-spacing: 0.1em;
+      text-align: center;
+      margin-bottom: 12px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .breakdown-input:focus { border-color: var(--red); }
+    .breakdown-input::placeholder { color: var(--border2); font-size: 16px; }
+
+    .breakdown-save-btn {
+      width: 100%;
+      margin-bottom: 10px;
+    }
+
+    .breakdown-tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: var(--white) !important;
+      border-color: rgba(255,255,255,0.15) !important;
+    }
+
   </style>
 </head>
 <body>
   <div id="app"></div>
 
   <script src="./content/challengeData.js"></script>
+  <script src="./config.js"></script>
   <script src="./js/scripts.js"></script>
 </body>
 </html>
