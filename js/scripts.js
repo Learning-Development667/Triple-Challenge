@@ -2,11 +2,10 @@
 //  Triple Challenge — scripts.js
 // ============================================================
 
-const BIN_ID  = '6a1c638621f9ee59d2a1ac2c';
-const API_KEY = '$2a$10$3ndQ23/GtXtiDjSQ8iUDOOQ7Qi/0m2u8KKkGmhfz5tJv1hSfb/U2W';
+const BIN_ID  = 'YOUR_BIN_ID_HERE';
+const API_KEY = 'YOUR_API_KEY_HERE';
 const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
-// Effort levels — SVG icons defined in getSVGIcon()
 const EFFORTS = [
   { key: 'easy',    label: 'Easy' },
   { key: 'neutral', label: 'Neutral' },
@@ -22,8 +21,8 @@ let currentUser = null;
 let appData = null;
 let notifTime = localStorage.getItem('notifTime') || '07:00';
 let notifEnabled = localStorage.getItem('notifEnabled') === 'true';
-let pendingLog = null; // { month, day, exercise }
-let pendingEffort = null; // set after effort chosen, before sets chosen
+let pendingLog = null;
+let pendingEffort = null;
 
 // ============================================================
 //  SVG ICONS
@@ -31,82 +30,22 @@ let pendingEffort = null; // set after effort chosen, before sets chosen
 
 function getSVGIcon(name, size = 28) {
   const icons = {
-    easy: `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="16" cy="16" r="13" stroke="currentColor" stroke-width="2"/>
-      <circle cx="11" cy="13" r="1.8" fill="currentColor"/>
-      <circle cx="21" cy="13" r="1.8" fill="currentColor"/>
-      <path d="M10 20 Q16 25 22 20" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
-    </svg>`,
-
-    neutral: `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="16" cy="16" r="13" stroke="currentColor" stroke-width="2"/>
-      <circle cx="11" cy="13" r="1.8" fill="currentColor"/>
-      <circle cx="21" cy="13" r="1.8" fill="currentColor"/>
-      <line x1="10" y1="21" x2="22" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-    </svg>`,
-
-    hard: `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="16" cy="16" r="13" stroke="currentColor" stroke-width="2"/>
-      <circle cx="11" cy="13" r="1.8" fill="currentColor"/>
-      <circle cx="21" cy="13" r="1.8" fill="currentColor"/>
-      <path d="M10 22 Q16 17 22 22" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
-    </svg>`,
-
-    single: `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="4" y="14" width="24" height="4" rx="2" fill="currentColor"/>
-      <circle cx="16" cy="8" r="3" fill="currentColor"/>
-      <circle cx="16" cy="24" r="3" fill="currentColor"/>
-    </svg>`,
-
-    sets: `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="4" y="7" width="24" height="3.5" rx="1.5" fill="currentColor"/>
-      <rect x="4" y="14" width="24" height="3.5" rx="1.5" fill="currentColor" opacity="0.6"/>
-      <rect x="4" y="21" width="24" height="3.5" rx="1.5" fill="currentColor" opacity="0.35"/>
-    </svg>`,
-
-    plank: `<svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="25" cy="8" r="3" fill="currentColor"/>
-      <line x1="4" y1="18" x2="28" y2="14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-      <line x1="4" y1="18" x2="4" y2="24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-      <line x1="18" y1="15.5" x2="20" y2="22" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-    </svg>`,
-
-    pushups: `<svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="24" cy="7" r="3" fill="currentColor"/>
-      <line x1="4" y1="22" x2="28" y2="16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-      <line x1="14" y1="19" x2="22" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-      <line x1="4" y1="22" x2="4" y2="26" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-      <line x1="28" y1="16" x2="28" y2="26" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-    </svg>`,
-
-    situps: `<svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="22" cy="6" r="3" fill="currentColor"/>
-      <path d="M8 24 L14 16 L20 10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-      <line x1="4" y1="24" x2="18" y2="24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-      <line x1="8" y1="24" x2="6" y2="28" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-      <line x1="14" y1="24" x2="14" y2="28" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-    </svg>`,
-
-    rest: `<svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M8 20 Q16 8 24 20" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.4"/>
-      <line x1="10" y1="13" x2="14" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
-      <line x1="18" y1="11" x2="22" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
-    </svg>`,
-
-    chart: `<svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="4" y="18" width="5" height="10" rx="1" fill="currentColor"/>
-      <rect x="13" y="10" width="5" height="18" rx="1" fill="currentColor"/>
-      <rect x="22" y="4" width="5" height="24" rx="1" fill="currentColor"/>
-    </svg>`,
-
-    settings: `<svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="16" cy="16" r="4" stroke="currentColor" stroke-width="2"/>
-      <path d="M16 4 L16 8 M16 24 L16 28 M4 16 L8 16 M24 16 L28 16 M7.5 7.5 L10.3 10.3 M21.7 21.7 L24.5 24.5 M24.5 7.5 L21.7 10.3 M10.3 21.7 L7.5 24.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-    </svg>`,
-
-    tick: `<svg width="18" height="18" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <polyline points="6,17 13,24 26,9" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>`
+    easy: `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="13" stroke="currentColor" stroke-width="2"/><circle cx="11" cy="13" r="1.8" fill="currentColor"/><circle cx="21" cy="13" r="1.8" fill="currentColor"/><path d="M10 20 Q16 25 22 20" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>`,
+    neutral: `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="13" stroke="currentColor" stroke-width="2"/><circle cx="11" cy="13" r="1.8" fill="currentColor"/><circle cx="21" cy="13" r="1.8" fill="currentColor"/><line x1="10" y1="21" x2="22" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+    hard: `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="13" stroke="currentColor" stroke-width="2"/><circle cx="11" cy="13" r="1.8" fill="currentColor"/><circle cx="21" cy="13" r="1.8" fill="currentColor"/><path d="M10 22 Q16 17 22 22" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>`,
+    single: `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="14" width="24" height="4" rx="2" fill="currentColor"/><circle cx="16" cy="8" r="3" fill="currentColor"/><circle cx="16" cy="24" r="3" fill="currentColor"/></svg>`,
+    sets: `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="7" width="24" height="3.5" rx="1.5" fill="currentColor"/><rect x="4" y="14" width="24" height="3.5" rx="1.5" fill="currentColor" opacity="0.6"/><rect x="4" y="21" width="24" height="3.5" rx="1.5" fill="currentColor" opacity="0.35"/></svg>`,
+    plank: `<svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="25" cy="8" r="3" fill="currentColor"/><line x1="4" y1="18" x2="28" y2="14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="4" y1="18" x2="4" y2="24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="18" y1="15.5" x2="20" y2="22" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+    pushups: `<svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="7" r="3" fill="currentColor"/><line x1="4" y1="22" x2="28" y2="16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="14" y1="19" x2="22" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="4" y1="22" x2="4" y2="26" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="28" y1="16" x2="28" y2="26" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+    situps: `<svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="22" cy="6" r="3" fill="currentColor"/><path d="M8 24 L14 16 L20 10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" fill="none"/><line x1="4" y1="24" x2="18" y2="24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="8" y1="24" x2="6" y2="28" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="14" y1="24" x2="14" y2="28" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+    rest: `<svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 20 Q16 8 24 20" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.4"/><line x1="10" y1="13" x2="14" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><line x1="18" y1="11" x2="22" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/></svg>`,
+    chart: `<svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="18" width="5" height="10" rx="1" fill="currentColor"/><rect x="13" y="10" width="5" height="18" rx="1" fill="currentColor"/><rect x="22" y="4" width="5" height="24" rx="1" fill="currentColor"/></svg>`,
+    settings: `<svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="4" stroke="currentColor" stroke-width="2"/><path d="M16 4 L16 8 M16 24 L16 28 M4 16 L8 16 M24 16 L28 16 M7.5 7.5 L10.3 10.3 M21.7 21.7 L24.5 24.5 M24.5 7.5 L21.7 10.3 M10.3 21.7 L7.5 24.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+    tick: `<svg width="18" height="18" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><polyline points="6,17 13,24 26,9" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    warmup: `<svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 4 C16 4 10 10 10 16 C10 19.3 12.7 22 16 22 C19.3 22 22 19.3 22 16 C22 10 16 4 16 4Z" stroke="currentColor" stroke-width="2" fill="none"/><path d="M16 22 L16 28" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="28" x2="20" y2="28" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+    cooldown: `<svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 6 L16 26 M8 10 L16 6 L24 10 M8 22 L16 26 L24 22 M6 16 L26 16 M6 16 L10 12 M6 16 L10 20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`,
+    formguide: `<svg width="16" height="16" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="12" stroke="currentColor" stroke-width="2"/><line x1="16" y1="14" x2="16" y2="22" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><circle cx="16" cy="10" r="1.5" fill="currentColor"/></svg>`,
+    chevron: `<svg width="14" height="14" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><polyline points="8,12 16,20 24,12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
   };
   return icons[name] || '';
 }
@@ -205,7 +144,9 @@ function showLoading() {
   setView(`<div class="loading-screen"><div class="spinner"></div><p>Loading...</p></div>`);
 }
 
-// ---- TODAY VIEW ----
+// ============================================================
+//  TODAY VIEW
+// ============================================================
 
 function renderToday() {
   const progress = getTodayProgress();
@@ -221,16 +162,54 @@ function renderToday() {
     const logKey = `m${month}d${day}`;
     const todayLog = userData.logs[logKey] || {};
 
+    const warmUp = getWarmUp(dayData);
+    const coolDown = getCoolDown(dayData);
+
     const exercises = [
       { key: 'plank',   label: 'PLANK',    icon: 'plank',   target: dayData.plank,   unit: '' },
       { key: 'pushups', label: 'PUSH-UPS', icon: 'pushups', target: dayData.pushups, unit: ' reps' },
       { key: 'situps',  label: 'SIT-UPS',  icon: 'situps',  target: dayData.situps,  unit: ' reps' },
     ];
 
+    const activeExercises = exercises.filter(e => e.target !== null);
+    const warmupDone = todayLog._warmup === true;
+    const cooldownDone = todayLog._cooldown === true;
+    const exercisesDone = activeExercises.every(e => todayLog[e.key] !== undefined);
+    const allDone = warmupDone && exercisesDone && cooldownDone;
+
+    // ---- WARM UP SECTION ----
+    const warmupItems = warmUp.map(item => `
+      <div class="routine-item">
+        <div class="routine-item-header">
+          <span class="routine-item-name">${item.name}</span>
+          <span class="routine-item-duration">${item.duration}</span>
+        </div>
+        <p class="routine-item-desc">${item.desc}</p>
+      </div>
+    `).join('');
+
+    const warmupSection = `
+      <div class="routine-section ${warmupDone ? 'routine-done' : ''}">
+        <div class="routine-header">
+          <div class="routine-title-row">
+            <span class="routine-icon">${getSVGIcon('warmup')}</span>
+            <span class="routine-title">WARM UP</span>
+          </div>
+          ${warmupDone
+            ? `<div class="routine-tick">${getSVGIcon('tick', 16)}</div>`
+            : `<button class="routine-log-btn" onclick="logWarmup()">DONE</button>`
+          }
+        </div>
+        <div class="routine-items">${warmupItems}</div>
+      </div>
+    `;
+
+    // ---- EXERCISE CARDS ----
     const exerciseCards = exercises.map(ex => {
       const isRest = ex.target === null;
       const logged = todayLog[ex.key];
       const done = logged !== undefined;
+      const guide = FORM_GUIDES[ex.key];
 
       if (isRest) {
         return `
@@ -255,26 +234,88 @@ function renderToday() {
           </div>`;
       }
 
+      const formGuideHtml = `
+        <div class="form-guide" id="fg-${ex.key}">
+          <button class="form-guide-toggle" onclick="toggleFormGuide('${ex.key}')">
+            ${getSVGIcon('formguide')} Form Guide <span class="fg-chevron" id="fgc-${ex.key}">${getSVGIcon('chevron')}</span>
+          </button>
+          <div class="form-guide-body" id="fgb-${ex.key}" style="display:none">
+            <div class="fg-cues">
+              <div class="fg-section-label">KEY CUES</div>
+              ${guide.cues.map(c => `<div class="fg-cue">${c}</div>`).join('')}
+            </div>
+            <div class="fg-steps">
+              <div class="fg-section-label">STEPS</div>
+              ${guide.steps.map((s, i) => `<div class="fg-step"><span class="fg-step-num">${i + 1}</span>${s}</div>`).join('')}
+            </div>
+          </div>
+        </div>`;
+
       return `
         <div class="exercise-card ${done ? 'done' : ''}">
-          <div class="ex-icon">${getSVGIcon(ex.icon)}</div>
-          <div class="ex-info">
-            <div class="ex-label">${ex.label}</div>
-            <div class="ex-target">TARGET: <strong>${targetDisplay}</strong></div>
-            ${loggedDetails}
+          <div class="ex-main">
+            <div class="ex-icon">${getSVGIcon(ex.icon)}</div>
+            <div class="ex-info">
+              <div class="ex-label">${ex.label}</div>
+              <div class="ex-target">TARGET: <strong>${targetDisplay}</strong></div>
+              ${loggedDetails}
+            </div>
+            <div class="ex-action">
+              ${done
+                ? `<div class="done-tick">${getSVGIcon('tick')}</div>`
+                : `<button class="log-btn" onclick="openEffortPicker(${month}, ${day}, '${ex.key}')">LOG</button>`
+              }
+            </div>
           </div>
-          <div class="ex-action">
-            ${done
-              ? `<div class="done-tick">${getSVGIcon('tick')}</div>`
-              : `<button class="log-btn" onclick="openEffortPicker(${month}, ${day}, '${ex.key}')">LOG</button>`
-            }
-          </div>
+          ${formGuideHtml}
         </div>`;
     }).join('');
 
-    const activeExercises = exercises.filter(e => e.target !== null);
+    // ---- COOL DOWN SECTION ----
+    const cooldownItems = coolDown.map(item => `
+      <div class="routine-item">
+        <div class="routine-item-header">
+          <span class="routine-item-name">${item.name}</span>
+          <span class="routine-item-duration">${item.duration}</span>
+        </div>
+        <p class="routine-item-desc">${item.desc}</p>
+      </div>
+    `).join('');
+
+    // Determine if cool down can be logged
+    const canLogCooldown = warmupDone && exercisesDone;
+
+    const cooldownSection = `
+      <div class="routine-section ${cooldownDone ? 'routine-done' : ''} ${!canLogCooldown && !cooldownDone ? 'routine-locked' : ''}">
+        <div class="routine-header">
+          <div class="routine-title-row">
+            <span class="routine-icon">${getSVGIcon('cooldown')}</span>
+            <span class="routine-title">COOL DOWN</span>
+          </div>
+          ${cooldownDone
+            ? `<div class="routine-tick">${getSVGIcon('tick', 16)}</div>`
+            : canLogCooldown
+              ? `<button class="routine-log-btn" onclick="logCooldown()">DONE</button>`
+              : `<span class="routine-locked-label">Complete exercises first</span>`
+          }
+        </div>
+        <div class="routine-items">${cooldownItems}</div>
+      </div>
+    `;
+
+    // ---- COMPLETION GATE ----
+    let completionBanner = '';
+    if (allDone) {
+      completionBanner = `<div class="all-done-banner">Day ${day} complete — well done!</div>`;
+    } else if (!warmupDone) {
+      completionBanner = `<div class="gate-notice">Complete your warm up to unlock the exercises</div>`;
+    } else if (!exercisesDone) {
+      completionBanner = `<div class="gate-notice">Log all exercises to unlock the cool down</div>`;
+    } else if (!cooldownDone) {
+      completionBanner = `<div class="gate-notice">Complete your cool down to finish the day</div>`;
+    }
+
     const doneCount = activeExercises.filter(e => todayLog[e.key] !== undefined).length;
-    const allDone = doneCount === activeExercises.length;
 
     bodyHtml = `
       <div class="day-header">
@@ -292,8 +333,10 @@ function renderToday() {
           <span class="ring-text">${doneCount}/${activeExercises.length}</span>
         </div>
       </div>
-      ${allDone ? '<div class="all-done-banner">All done for today!</div>' : ''}
+      ${completionBanner}
+      ${warmupSection}
       <div class="exercises-list">${exerciseCards}</div>
+      ${cooldownSection}
     `;
   }
 
@@ -312,8 +355,8 @@ function renderToday() {
           </div>
         </div>
         <div class="header-actions">
-          <button class="icon-btn" onclick="renderProgress()" title="Progress">${getSVGIcon('chart')}</button>
-          <button class="icon-btn" onclick="renderSettings()" title="Settings">${getSVGIcon('settings')}</button>
+          <button class="icon-btn" onclick="renderProgress()">${getSVGIcon('chart')}</button>
+          <button class="icon-btn" onclick="renderSettings()">${getSVGIcon('settings')}</button>
         </div>
       </header>
       <main class="main-content">
@@ -329,18 +372,55 @@ function renderToday() {
   `);
 }
 
+// ---- WARM UP / COOL DOWN LOGGING ----
+
+async function logWarmup() {
+  const progress = getTodayProgress();
+  if (!progress) return;
+  const { month, day } = progress;
+  const logKey = `m${month}d${day}`;
+  if (!appData[currentUser].logs[logKey]) appData[currentUser].logs[logKey] = {};
+  appData[currentUser].logs[logKey]._warmup = true;
+  await saveData();
+  renderToday();
+}
+
+async function logCooldown() {
+  const progress = getTodayProgress();
+  if (!progress) return;
+  const { month, day } = progress;
+  const logKey = `m${month}d${day}`;
+  if (!appData[currentUser].logs[logKey]) appData[currentUser].logs[logKey] = {};
+  appData[currentUser].logs[logKey]._cooldown = true;
+  await saveData();
+  renderToday();
+}
+
+// ---- FORM GUIDE TOGGLE ----
+
+function toggleFormGuide(key) {
+  const body = document.getElementById(`fgb-${key}`);
+  const chevron = document.getElementById(`fgc-${key}`);
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+
 function getPartnerSummary(partner) {
   const progress = getTodayProgress();
   if (!progress) return 'Challenge complete!';
   const { month, day } = progress;
   const logKey = `m${month}d${day}`;
   const log = appData[partner]?.logs[logKey] || {};
-  const keys = Object.keys(log);
-  if (keys.length === 0) return 'Nothing logged yet today';
-  return `${keys.length} exercise${keys.length > 1 ? 's' : ''} logged today`;
+  const keys = Object.keys(log).filter(k => !k.startsWith('_'));
+  const warmup = log._warmup ? 'Warmed up' : null;
+  const cooldown = log._cooldown ? 'Cooled down' : null;
+  const parts = [warmup, keys.length ? `${keys.length} exercise${keys.length > 1 ? 's' : ''} logged` : null, cooldown].filter(Boolean);
+  if (parts.length === 0) return 'Nothing logged yet today';
+  return parts.join(' · ');
 }
 
-// ---- EFFORT PICKER ----
+// ---- EFFORT / SETS PICKERS ----
 
 function renderEffortModal() {
   const buttons = EFFORTS.map(e => `
@@ -349,7 +429,6 @@ function renderEffortModal() {
       <span class="pick-label">${e.label}</span>
     </button>
   `).join('');
-
   return `
     <div class="modal-overlay" id="effortModal" style="display:none">
       <div class="modal-card">
@@ -367,7 +446,6 @@ function renderSetsModal() {
       <span class="pick-label">${s.label}</span>
     </button>
   `).join('');
-
   return `
     <div class="modal-overlay" id="setsModal" style="display:none">
       <div class="modal-card">
@@ -395,11 +473,7 @@ async function selectSets(setsKey) {
   const { month, day, exercise } = pendingLog;
   const logKey = `m${month}d${day}`;
   if (!appData[currentUser].logs[logKey]) appData[currentUser].logs[logKey] = {};
-  appData[currentUser].logs[logKey][exercise] = {
-    effort: pendingEffort,
-    sets: setsKey,
-    ts: Date.now()
-  };
+  appData[currentUser].logs[logKey][exercise] = { effort: pendingEffort, sets: setsKey, ts: Date.now() };
   closeAllModals();
   await saveData();
   renderToday();
@@ -412,16 +486,16 @@ function closeAllModals() {
   pendingEffort = null;
 }
 
-// ---- PROGRESS VIEW ----
+// ============================================================
+//  PROGRESS VIEW
+// ============================================================
 
 function renderProgress() {
   const months = ['month1', 'month2', 'month3'];
   const monthLabels = ['Month 1', 'Month 2', 'Month 3'];
 
   const tabs = months.map((m, i) => `
-    <button class="prog-tab ${i === 0 ? 'active' : ''}" onclick="switchProgTab(${i})" id="ptab${i}">
-      ${monthLabels[i]}
-    </button>
+    <button class="prog-tab ${i === 0 ? 'active' : ''}" onclick="switchProgTab(${i})" id="ptab${i}">${monthLabels[i]}</button>
   `).join('');
 
   const tables = months.map((mk, mi) => {
@@ -435,9 +509,7 @@ function renderProgress() {
         if (target === null) return `<td class="rest-cell">${getSVGIcon('rest', 14)}</td>`;
         const done = log !== undefined;
         if (!done) return `<td class="pending-cell">—</td>`;
-        const effortIcon = getSVGIcon(log.effort, 13);
-        const setsIcon = log.sets === 'sets' ? getSVGIcon('sets', 13) : '';
-        return `<td class="done-cell">${getSVGIcon('tick', 13)}${effortIcon}${setsIcon}</td>`;
+        return `<td class="done-cell">${getSVGIcon('tick', 13)}${getSVGIcon(log.effort, 13)}</td>`;
       };
 
       const totalDay = mi * 30 + d.day - 1;
@@ -447,6 +519,9 @@ function renderProgress() {
       const dayDate = new Date(start.getTime() + totalDay * 86400000);
       const isPast = dayDate < today;
       const isToday = dayDate.getTime() === today.getTime();
+
+      const mWarm = markLog._warmup ? `<span class="prog-warmup-tick">${getSVGIcon('warmup', 11)}</span>` : '';
+      const sWarm = shelleyLog._warmup ? `<span class="prog-warmup-tick">${getSVGIcon('warmup', 11)}</span>` : '';
 
       return `
         <tr class="${isToday ? 'today-row' : ''} ${isPast && !isToday ? 'past-row' : ''}">
@@ -534,7 +609,6 @@ function renderOverallStats() {
         <div class="stat-pct">${pct}%</div>
       </div>`;
   }).join('');
-
   return `<div class="stats-row">${stats}</div>`;
 }
 
@@ -545,7 +619,9 @@ function switchProgTab(idx) {
   });
 }
 
-// ---- SETTINGS VIEW ----
+// ============================================================
+//  SETTINGS VIEW
+// ============================================================
 
 function renderSettings() {
   setView(`
@@ -560,7 +636,6 @@ function renderSettings() {
         </div>
       </header>
       <main class="main-content settings-content">
-
         <div class="settings-section">
           <div class="settings-label">NOTIFICATIONS</div>
           <div class="settings-card">
@@ -578,29 +653,25 @@ function renderSettings() {
             <div class="setting-hint" id="notifHint">${notifEnabled ? 'Notifications on' : 'Enable to get daily reminders'}</div>
           </div>
         </div>
-
         <div class="settings-section">
           <div class="settings-label">INSTALL APP</div>
           <div class="settings-card">
-            <p class="install-text">Add this app to your phone's home screen for the best experience and notification support.</p>
+            <p class="install-text">Add this app to your phone home screen for the best experience and notification support.</p>
             <div class="install-steps">
               <div class="install-platform"><strong>iPhone</strong> — Open in Safari &rarr; Share &rarr; Add to Home Screen</div>
               <div class="install-platform"><strong>Android</strong> — Open in Chrome &rarr; Menu &rarr; Add to Home Screen</div>
             </div>
           </div>
         </div>
-
         <div class="settings-section">
           <div class="settings-label">CHALLENGE INFO</div>
           <div class="settings-card">
-            <div class="info-row"><span>Started</span><span>23 May 2026</span></div>
-            <div class="info-row"><span>Ends</span><span>20 Aug 2026</span></div>
+            <div class="info-row"><span>Started</span><span>24 May 2026</span></div>
+            <div class="info-row"><span>Ends</span><span>21 Aug 2026</span></div>
             <div class="info-row"><span>Current user</span><span>${currentUser.toUpperCase()}</span></div>
           </div>
         </div>
-
         <button class="switch-btn" onclick="renderUserSelect()">SWITCH USER</button>
-
       </main>
     </div>
   `);
@@ -639,7 +710,6 @@ function scheduleNotification() {
   const next = new Date();
   next.setHours(h, m, 0, 0);
   if (next <= now) next.setDate(next.getDate() + 1);
-  const delay = next - now;
   setTimeout(() => {
     const progress = getTodayProgress();
     if (progress) {
@@ -649,7 +719,7 @@ function scheduleNotification() {
       });
     }
     if (notifEnabled) setTimeout(scheduleNotification, 60000);
-  }, delay);
+  }, next - now);
 }
 
 if (notifEnabled && 'Notification' in window && Notification.permission === 'granted') {
