@@ -727,6 +727,13 @@ function renderSettings() {
           </div>
         </div>
         <div class="settings-section">
+          <div class="settings-label">PAST DAYS</div>
+          <div class="settings-card">
+            <p class="install-text">Log exercises for days that were completed before the app was set up.</p>
+            <button class="routine-log-btn" style="width:100%;margin:0 0 4px" onclick="renderBackfill()">BACKFILL PAST DAYS</button>
+          </div>
+        </div>
+        <div class="settings-section">
           <div class="settings-label">CHALLENGE INFO</div>
           <div class="settings-card">
             <div class="info-row"><span>Started</span><span>24 May 2026</span></div>
@@ -738,6 +745,164 @@ function renderSettings() {
       </main>
     </div>
   `);
+}
+
+// ============================================================
+//  BACKFILL SCREEN
+// ============================================================
+
+function renderBackfill() {
+  // Only show past days (days 1-7 for now, i.e. before today)
+  const today = new Date(); today.setHours(0,0,0,0);
+  const start = new Date(CHALLENGE_START); start.setHours(0,0,0,0);
+  const diffToday = Math.floor((today - start) / 86400000);
+
+  let dayOptions = '';
+  for (let i = 0; i < Math.min(diffToday, 90); i++) {
+    const month = Math.floor(i / 30) + 1;
+    const day = (i % 30) + 1;
+    const date = new Date(start.getTime() + i * 86400000);
+    const dateStr = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    const logKey = `m${month}d${day}`;
+    const mDone = Object.keys(appData.mark.logs[logKey] || {}).filter(k => !k.startsWith('_')).length;
+    const sDone = Object.keys(appData.shelley.logs[logKey] || {}).filter(k => !k.startsWith('_')).length;
+    dayOptions += `
+      <button class="backfill-day-btn" onclick="renderBackfillDay(${month}, ${day})">
+        <span class="backfill-day-label">Month ${month} — Day ${day}</span>
+        <span class="backfill-day-date">${dateStr}</span>
+        <span class="backfill-day-status">
+          M: ${mDone}/3 &nbsp; S: ${sDone}/3
+        </span>
+      </button>`;
+  }
+
+  setView(`
+    <div class="main-screen">
+      <header class="app-header">
+        <div class="header-left">
+          <button class="back-btn" onclick="renderSettings()">&#9664;</button>
+          <div class="header-title">
+            <span class="header-user">BACKFILL</span>
+            <span class="header-sub">SELECT A DAY</span>
+          </div>
+        </div>
+      </header>
+      <main class="main-content">
+        <div class="backfill-list">${dayOptions}</div>
+      </main>
+    </div>
+  `);
+}
+
+function renderBackfillDay(month, day) {
+  const dayData = getDayData(month, day);
+  const exercises = [
+    { key: 'plank',   label: 'Plank',    target: dayData.plank,   unit: '' },
+    { key: 'pushups', label: 'Push-ups', target: dayData.pushups, unit: ' reps' },
+    { key: 'situps',  label: 'Sit-ups',  target: dayData.situps,  unit: ' reps' },
+  ];
+
+  const userSections = ['mark', 'shelley'].map(u => {
+    const logKey = `m${month}d${day}`;
+    const log = appData[u].logs[logKey] || {};
+
+    const exRows = exercises.map(ex => {
+      if (ex.target === null) {
+        return `<div class="backfill-ex-row rest"><span>${ex.label}</span><span class="prog-rest-label">Rest Day</span></div>`;
+      }
+      const logged = log[ex.key];
+      const done = logged !== undefined;
+      return `
+        <div class="backfill-ex-row ${done ? 'done' : ''}">
+          <span class="backfill-ex-label">${ex.label} <span class="prog-target">${ex.target}${ex.unit}</span></span>
+          ${done
+            ? `<span class="backfill-done-tag">${getSVGIcon('tick', 13)} ${EFFORTS.find(e=>e.key===logged.effort)?.label || ''}</span>`
+            : `<button class="log-btn backfill-log-btn" onclick="backfillLog('${u}', ${month}, ${day}, '${ex.key}')">LOG</button>`
+          }
+        </div>`;
+    }).join('');
+
+    const warmupDone = log._warmup === true;
+    const cooldownDone = log._cooldown === true;
+
+    return `
+      <div class="backfill-user-section">
+        <div class="backfill-user-header">
+          <span class="backfill-user-name">${u.toUpperCase()}</span>
+          <span class="backfill-mini-status">
+            ${warmupDone ? getSVGIcon('warmup', 12) : '<span style="opacity:0.2">'+getSVGIcon('warmup', 12)+'</span>'}
+            ${cooldownDone ? getSVGIcon('cooldown', 12) : '<span style="opacity:0.2">'+getSVGIcon('cooldown', 12)+'</span>'}
+          </span>
+        </div>
+        ${exRows}
+        <div class="backfill-extras">
+          ${!warmupDone ? `<button class="backfill-extra-btn" onclick="backfillMeta('${u}', ${month}, ${day}, '_warmup')">Mark warm up done</button>` : `<span class="backfill-extra-done">${getSVGIcon('tick',12)} Warm up logged</span>`}
+          ${!cooldownDone ? `<button class="backfill-extra-btn" onclick="backfillMeta('${u}', ${month}, ${day}, '_cooldown')">Mark cool down done</button>` : `<span class="backfill-extra-done">${getSVGIcon('tick',12)} Cool down logged</span>`}
+        </div>
+      </div>`;
+  }).join('');
+
+  setView(`
+    <div class="main-screen">
+      <header class="app-header">
+        <div class="header-left">
+          <button class="back-btn" onclick="renderBackfill()">&#9664;</button>
+          <div class="header-title">
+            <span class="header-user">DAY ${day}</span>
+            <span class="header-sub">MONTH ${month} — BACKFILL</span>
+          </div>
+        </div>
+      </header>
+      <main class="main-content">
+        ${userSections}
+      </main>
+    </div>
+    ${renderBackfillEffortModal(month, day)}
+  `);
+}
+
+let backfillPending = null;
+
+function renderBackfillEffortModal(month, day) {
+  const buttons = EFFORTS.map(e => `
+    <button class="pick-btn" onclick="confirmBackfillLog('${e.key}')">
+      <span class="pick-icon">${getSVGIcon(e.key, 32)}</span>
+      <span class="pick-label">${e.label}</span>
+    </button>
+  `).join('');
+  return `
+    <div class="modal-overlay" id="backfillEffortModal" style="display:none">
+      <div class="modal-card">
+        <h2 class="modal-title">HOW WAS IT?</h2>
+        <div class="pick-grid three">${buttons}</div>
+        <button class="cancel-btn" onclick="document.getElementById('backfillEffortModal').style.display='none'">CANCEL</button>
+      </div>
+    </div>`;
+}
+
+function backfillLog(user, month, day, exercise) {
+  backfillPending = { user, month, day, exercise };
+  document.getElementById('backfillEffortModal').style.display = 'flex';
+}
+
+async function confirmBackfillLog(effortKey) {
+  if (!backfillPending) return;
+  const { user, month, day, exercise } = backfillPending;
+  const logKey = `m${month}d${day}`;
+  if (!appData[user].logs[logKey]) appData[user].logs[logKey] = {};
+  appData[user].logs[logKey][exercise] = { effort: effortKey, sets: 'single', breakdown: null, ts: Date.now() };
+  backfillPending = null;
+  document.getElementById('backfillEffortModal').style.display = 'none';
+  await saveData();
+  renderBackfillDay(month, day);
+}
+
+async function backfillMeta(user, month, day, key) {
+  const logKey = `m${month}d${day}`;
+  if (!appData[user].logs[logKey]) appData[user].logs[logKey] = {};
+  appData[user].logs[logKey][key] = true;
+  await saveData();
+  renderBackfillDay(month, day);
 }
 
 async function toggleNotif() {
@@ -788,4 +953,3 @@ function scheduleNotification() {
 if (notifEnabled && 'Notification' in window && Notification.permission === 'granted') {
   setTimeout(scheduleNotification, 2000);
 }
-
