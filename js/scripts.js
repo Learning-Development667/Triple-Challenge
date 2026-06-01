@@ -1,10 +1,7 @@
 // ============================================================
 //  Triple Challenge — scripts.js
+//  Credentials are in config.js — do not add them here.
 // ============================================================
-
-const BIN_ID  = 'YOUR_BIN_ID_HERE';
-const API_KEY = 'YOUR_API_KEY_HERE';
-const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
 const EFFORTS = [
   { key: 'easy',    label: 'Easy' },
@@ -228,10 +225,14 @@ function renderToday() {
       if (done) {
         const effortLabel = EFFORTS.find(e => e.key === logged.effort)?.label || '';
         const setsLabel = logged.sets === 'single' ? 'One sitting' : 'Sets';
+        const breakdownTag = logged.breakdown
+          ? `<span class="logged-tag breakdown-tag">${logged.breakdown}</span>`
+          : '';
         loggedDetails = `
           <div class="ex-logged-row">
             <span class="logged-tag effort-${logged.effort}">${getSVGIcon(logged.effort, 14)} ${effortLabel}</span>
             <span class="logged-tag">${getSVGIcon(logged.sets, 14)} ${setsLabel}</span>
+            ${breakdownTag}
           </div>`;
       }
 
@@ -367,6 +368,7 @@ function renderToday() {
     </div>
     ${renderEffortModal()}
     ${renderSetsModal()}
+    ${renderSetsBreakdownModal()}
   `);
 }
 
@@ -465,6 +467,50 @@ function renderSetsModal() {
     </div>`;
 }
 
+function renderSetsBreakdownModal() {
+  return `
+    <div class="modal-overlay" id="setsBreakdownModal" style="display:none">
+      <div class="modal-card">
+        <h2 class="modal-title">SETS BREAKDOWN</h2>
+        <p class="breakdown-hint">Enter how you broke it down, e.g. 3x20</p>
+        <div class="breakdown-presets">
+          <button class="preset-btn" onclick="setBreakdownPreset('2x')">2 sets</button>
+          <button class="preset-btn" onclick="setBreakdownPreset('3x')">3 sets</button>
+          <button class="preset-btn" onclick="setBreakdownPreset('4x')">4 sets</button>
+          <button class="preset-btn" onclick="setBreakdownPreset('5x')">5 sets</button>
+        </div>
+        <input type="text" class="breakdown-input" id="setsBreakdownInput"
+          placeholder="e.g. 3x20 or 20+20+20"
+          inputmode="text" autocomplete="off" autocorrect="off">
+        <button class="log-btn breakdown-save-btn" onclick="saveSetsBreakdown()">SAVE</button>
+        <button class="cancel-btn" onclick="closeAllModals()">CANCEL</button>
+      </div>
+    </div>`;
+}
+
+function setBreakdownPreset(prefix) {
+  const input = document.getElementById('setsBreakdownInput');
+  input.value = prefix;
+  input.focus();
+}
+
+async function saveSetsBreakdown() {
+  const breakdown = document.getElementById('setsBreakdownInput').value.trim();
+  if (!pendingLog || !pendingEffort) return;
+  const { month, day, exercise } = pendingLog;
+  const logKey = `m${month}d${day}`;
+  if (!appData[currentUser].logs[logKey]) appData[currentUser].logs[logKey] = {};
+  appData[currentUser].logs[logKey][exercise] = {
+    effort: pendingEffort,
+    sets: 'sets',
+    breakdown: breakdown || null,
+    ts: Date.now()
+  };
+  closeAllModals();
+  await saveData();
+  renderToday();
+}
+
 function openEffortPicker(month, day, exercise) {
   pendingLog = { month, day, exercise };
   pendingEffort = null;
@@ -479,10 +525,18 @@ function selectEffort(effortKey) {
 
 async function selectSets(setsKey) {
   if (!pendingLog || !pendingEffort) return;
+  if (setsKey === 'sets') {
+    // Show breakdown input before saving
+    document.getElementById('setsModal').style.display = 'none';
+    document.getElementById('setsBreakdownModal').style.display = 'flex';
+    setTimeout(() => document.getElementById('setsBreakdownInput')?.focus(), 300);
+    return;
+  }
+  // One sitting — save immediately
   const { month, day, exercise } = pendingLog;
   const logKey = `m${month}d${day}`;
   if (!appData[currentUser].logs[logKey]) appData[currentUser].logs[logKey] = {};
-  appData[currentUser].logs[logKey][exercise] = { effort: pendingEffort, sets: setsKey, ts: Date.now() };
+  appData[currentUser].logs[logKey][exercise] = { effort: pendingEffort, sets: setsKey, breakdown: null, ts: Date.now() };
   closeAllModals();
   await saveData();
   renderToday();
@@ -491,6 +545,7 @@ async function selectSets(setsKey) {
 function closeAllModals() {
   document.getElementById('effortModal').style.display = 'none';
   document.getElementById('setsModal').style.display = 'none';
+  document.getElementById('setsBreakdownModal').style.display = 'none';
   pendingLog = null;
   pendingEffort = null;
 }
@@ -514,13 +569,6 @@ function renderProgress() {
       const markLog = appData.mark.logs[logKey] || {};
       const shelleyLog = appData.shelley.logs[logKey] || {};
 
-      const exCell = (log, target) => {
-        if (target === null) return `<td class="rest-cell">${getSVGIcon('rest', 14)}</td>`;
-        const done = log !== undefined;
-        if (!done) return `<td class="pending-cell">—</td>`;
-        return `<td class="done-cell">${getSVGIcon('tick', 13)}${getSVGIcon(log.effort, 13)}</td>`;
-      };
-
       const totalDay = mi * 30 + d.day - 1;
       const start = new Date(CHALLENGE_START);
       start.setHours(0,0,0,0);
@@ -529,46 +577,52 @@ function renderProgress() {
       const isPast = dayDate < today;
       const isToday = dayDate.getTime() === today.getTime();
 
-      const mWarm = markLog._warmup ? `<span class="prog-warmup-tick">${getSVGIcon('warmup', 11)}</span>` : '';
-      const sWarm = shelleyLog._warmup ? `<span class="prog-warmup-tick">${getSVGIcon('warmup', 11)}</span>` : '';
+      const exRow = (ex, target, mLog, sLog) => {
+        if (target === null) {
+          return `
+            <div class="prog-ex-row rest">
+              <span class="prog-ex-name">${ex}</span>
+              <span class="prog-rest-label">Rest Day</span>
+              <span class="prog-rest-label">Rest Day</span>
+            </div>`;
+        }
+        const mDone = mLog !== undefined;
+        const sDone = sLog !== undefined;
+        const mCell = mDone
+          ? `<span class="prog-done-cell">${getSVGIcon('tick', 13)} ${getSVGIcon(mLog.effort, 13)}</span>`
+          : `<span class="prog-empty-cell">${isPast || isToday ? '—' : ''}</span>`;
+        const sCell = sDone
+          ? `<span class="prog-done-cell">${getSVGIcon('tick', 13)} ${getSVGIcon(sLog.effort, 13)}</span>`
+          : `<span class="prog-empty-cell">${isPast || isToday ? '—' : ''}</span>`;
+        return `
+          <div class="prog-ex-row">
+            <span class="prog-ex-name">${ex} <span class="prog-target">${target}</span></span>
+            ${mCell}
+            ${sCell}
+          </div>`;
+      };
 
       return `
-        <tr class="${isToday ? 'today-row' : ''} ${isPast && !isToday ? 'past-row' : ''}">
-          <td class="day-cell">${isToday ? '&rarr;' : ''}${d.day}</td>
-          <td class="target-cell">${d.plank || '—'}</td>
-          ${exCell(markLog.plank, d.plank)}
-          ${exCell(shelleyLog.plank, d.plank)}
-          <td class="target-cell">${d.pushups !== null ? d.pushups : '—'}</td>
-          ${exCell(markLog.pushups, d.pushups)}
-          ${exCell(shelleyLog.pushups, d.pushups)}
-          <td class="target-cell">${d.situps !== null ? d.situps : '—'}</td>
-          ${exCell(markLog.situps, d.situps)}
-          ${exCell(shelleyLog.situps, d.situps)}
-        </tr>`;
+        <div class="prog-day-card ${isToday ? 'prog-today' : ''} ${isPast && !isToday ? 'prog-past' : ''}">
+          <div class="prog-day-header">
+            <span class="prog-day-num">${isToday ? '→ ' : ''}Day ${d.day}</span>
+            <span class="prog-day-date">${dayDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+          </div>
+          <div class="prog-ex-rows">
+            <div class="prog-ex-header">
+              <span></span><span class="prog-user-label">MARK</span><span class="prog-user-label">SHELLEY</span>
+            </div>
+            ${exRow('Plank', d.plank, markLog.plank, shelleyLog.plank)}
+            ${exRow('Push-ups', d.pushups !== null ? d.pushups + ' reps' : null, markLog.pushups, shelleyLog.pushups)}
+            ${exRow('Sit-ups', d.situps !== null ? d.situps + ' reps' : null, markLog.situps, shelleyLog.situps)}
+          </div>
+        </div>`;
     }).join('');
 
     return `
       <div class="prog-table-wrap" id="ptable${mi}" style="${mi === 0 ? '' : 'display:none'}">
         <div class="prog-label">${CHALLENGE_DATA[mk].label}</div>
-        <div class="table-scroll">
-          <table class="prog-table">
-            <thead>
-              <tr>
-                <th>Day</th>
-                <th colspan="3">PLANK</th>
-                <th colspan="3">PUSH-UPS</th>
-                <th colspan="3">SIT-UPS</th>
-              </tr>
-              <tr class="sub-header">
-                <th></th>
-                <th>Target</th><th>M</th><th>S</th>
-                <th>Target</th><th>M</th><th>S</th>
-                <th>Target</th><th>M</th><th>S</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
-        </div>
+        ${rows}
       </div>`;
   }).join('');
 
@@ -734,3 +788,4 @@ function scheduleNotification() {
 if (notifEnabled && 'Notification' in window && Notification.permission === 'granted') {
   setTimeout(scheduleNotification, 2000);
 }
+
