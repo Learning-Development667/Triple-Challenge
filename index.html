@@ -51,9 +51,9 @@
     }
 
     #app {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      overflow: hidden;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
     }
 
     button { cursor: pointer; border: none; background: none; color: inherit; font-family: inherit; }
@@ -63,11 +63,12 @@
        LOADING
     ===================================================== */
     .loading-screen {
+      flex: 1;
+      min-height: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 100%;
       gap: 16px;
       color: var(--dim);
       font-family: var(--font-mono);
@@ -90,8 +91,8 @@
        USER SELECT SCREEN
     ===================================================== */
     .user-select-screen {
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
+      flex: 1;
+      min-height: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -102,7 +103,6 @@
       background-image:
         radial-gradient(ellipse at 20% 20%, rgba(192,57,43,0.08) 0%, transparent 60%),
         radial-gradient(ellipse at 80% 80%, rgba(192,57,43,0.05) 0%, transparent 60%);
-      overflow-y: auto;
     }
 
     .logo-block {
@@ -182,8 +182,8 @@
     .main-screen {
       display: flex;
       flex-direction: column;
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
+      flex: 1;
+      min-height: 0;
       overflow: hidden;
     }
 
