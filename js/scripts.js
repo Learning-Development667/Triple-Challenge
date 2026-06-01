@@ -190,17 +190,18 @@ function renderToday() {
 
     const warmupSection = `
       <div class="routine-section ${warmupDone ? 'routine-done' : ''}">
-        <div class="routine-header">
+        <div class="routine-header" onclick="toggleRoutine('warmup')">
           <div class="routine-title-row">
             <span class="routine-icon">${getSVGIcon('warmup')}</span>
             <span class="routine-title">WARM UP</span>
+            <span class="routine-chevron" id="rc-warmup">${getSVGIcon('chevron', 14)}</span>
           </div>
           ${warmupDone
             ? `<div class="routine-tick">${getSVGIcon('tick', 16)}</div>`
-            : `<button class="routine-log-btn" onclick="logWarmup()">DONE</button>`
+            : `<button class="routine-log-btn" onclick="event.stopPropagation();logWarmup()">DONE</button>`
           }
         </div>
-        <div class="routine-items">${warmupItems}</div>
+        <div class="routine-items" id="ri-warmup" style="display:none">${warmupItems}</div>
       </div>
     `;
 
@@ -287,19 +288,20 @@ function renderToday() {
 
     const cooldownSection = `
       <div class="routine-section ${cooldownDone ? 'routine-done' : ''} ${!canLogCooldown && !cooldownDone ? 'routine-locked' : ''}">
-        <div class="routine-header">
+        <div class="routine-header" onclick="toggleRoutine('cooldown')">
           <div class="routine-title-row">
             <span class="routine-icon">${getSVGIcon('cooldown')}</span>
             <span class="routine-title">COOL DOWN</span>
+            <span class="routine-chevron" id="rc-cooldown">${getSVGIcon('chevron', 14)}</span>
           </div>
           ${cooldownDone
             ? `<div class="routine-tick">${getSVGIcon('tick', 16)}</div>`
             : canLogCooldown
-              ? `<button class="routine-log-btn" onclick="logCooldown()">DONE</button>`
+              ? `<button class="routine-log-btn" onclick="event.stopPropagation();logCooldown()">DONE</button>`
               : `<span class="routine-locked-label">Complete exercises first</span>`
           }
         </div>
-        <div class="routine-items">${cooldownItems}</div>
+        <div class="routine-items" id="ri-cooldown" style="display:none">${cooldownItems}</div>
       </div>
     `;
 
@@ -384,6 +386,17 @@ async function logCooldown() {
   appData[currentUser].logs[logKey]._cooldown = true;
   await saveData();
   renderToday();
+}
+
+// ---- ROUTINE TOGGLE ----
+
+function toggleRoutine(key) {
+  const items = document.getElementById(`ri-${key}`);
+  const chevron = document.getElementById(`rc-${key}`);
+  if (!items) return;
+  const isOpen = items.style.display !== 'none';
+  items.style.display = isOpen ? 'none' : 'block';
+  if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
 }
 
 // ---- FORM GUIDE TOGGLE ----
