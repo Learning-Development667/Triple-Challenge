@@ -908,7 +908,9 @@
       align-items: center;
       justify-content: space-between;
       padding: 14px 16px;
-      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .routine-title-row {
@@ -916,6 +918,15 @@
       align-items: center;
       gap: 8px;
       color: var(--white);
+      flex: 1;
+    }
+
+    .routine-chevron {
+      display: flex;
+      align-items: center;
+      color: var(--dim);
+      transition: transform 0.2s;
+      margin-left: 4px;
     }
 
     .routine-icon { display: flex; align-items: center; color: var(--red); }
