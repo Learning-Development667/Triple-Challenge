@@ -396,8 +396,13 @@ async function logWarmup() {
   const logKey = `m${month}d${day}`;
   if (!appData[currentUser].logs[logKey]) appData[currentUser].logs[logKey] = {};
   appData[currentUser].logs[logKey]._warmup = true;
+  const scrollTop = document.querySelector('.main-content')?.scrollTop || 0;
   await saveData();
   renderToday();
+  requestAnimationFrame(() => {
+    const mc = document.querySelector('.main-content');
+    if (mc) mc.scrollTop = scrollTop;
+  });
 }
 
 async function logCooldown() {
@@ -419,15 +424,21 @@ async function logStretch(idx) {
   if (!appData[currentUser].logs[logKey]) appData[currentUser].logs[logKey] = {};
   if (!appData[currentUser].logs[logKey]._cooldownStretches) appData[currentUser].logs[logKey]._cooldownStretches = {};
   appData[currentUser].logs[logKey]._cooldownStretches[`stretch_${idx}`] = true;
-  // If all stretches done, also mark _cooldown true
   const dayData = getDayData(month, day);
   const cd = getCoolDown(dayData);
   const doneKeys = Object.keys(appData[currentUser].logs[logKey]._cooldownStretches);
   if (doneKeys.length >= cd.length) {
     appData[currentUser].logs[logKey]._cooldown = true;
   }
+  // Save scroll position before re-render
+  const scrollTop = document.querySelector('.main-content')?.scrollTop || 0;
   await saveData();
   renderToday();
+  // Restore scroll position after render
+  requestAnimationFrame(() => {
+    const mc = document.querySelector('.main-content');
+    if (mc) mc.scrollTop = scrollTop;
+  });
 }
 
 // ---- ROUTINE TOGGLE ----
