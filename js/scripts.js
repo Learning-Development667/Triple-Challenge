@@ -332,6 +332,10 @@ function renderToday() {
     `;
   }
 
+  // Scroll to top
+  const mc = document.querySelector('.main-content');
+  if (mc) mc.scrollTop = 0;
+
   const partner = currentUser === 'mark' ? 'shelley' : 'mark';
   const partnerLabel = partner === 'mark' ? 'MARK' : 'SHELLEY';
   const partnerSummary = getPartnerSummary(partner);
