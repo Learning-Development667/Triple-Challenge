@@ -304,18 +304,8 @@ function renderToday() {
     `;
 
     // ---- COMPLETION GATE ----
-    let completionBanner = '';
-    if (allDone) {
-      completionBanner = `<div class="all-done-banner">Day ${day} complete — well done!</div>`;
-    } else if (!warmupDone) {
-      completionBanner = `<div class="gate-notice">Complete your warm up to unlock the exercises</div>`;
-    } else if (!exercisesDone) {
-      completionBanner = `<div class="gate-notice">Log all exercises to unlock the cool down</div>`;
-    } else if (!cooldownDone) {
-      completionBanner = `<div class="gate-notice">Complete your cool down to finish the day</div>`;
-    }
-
     const doneCount = activeExercises.filter(e => todayLog[e.key] !== undefined).length;
+    const allDoneBanner = allDone ? `<div class="all-done-banner">Day ${day} complete — well done!</div>` : '';
 
     bodyHtml = `
       <div class="day-header">
@@ -333,7 +323,7 @@ function renderToday() {
           <span class="ring-text">${doneCount}/${activeExercises.length}</span>
         </div>
       </div>
-      ${completionBanner}
+      ${allDoneBanner}
       ${warmupSection}
       <div class="exercises-list">${exerciseCards}</div>
       ${cooldownSection}
