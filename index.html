@@ -1364,6 +1364,40 @@
       color: var(--green);
     }
 
+    .routine-item-done {
+      opacity: 0.6;
+    }
+
+    .stretch-log-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 8px;
+    }
+
+    .stretch-log-btn {
+      background: var(--green);
+      color: var(--white);
+      font-family: var(--font-head);
+      font-size: 13px;
+      letter-spacing: 1px;
+      padding: 5px 14px;
+      border-radius: 7px;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+
+    .stretch-log-btn:active { opacity: 0.8; transform: scale(0.96); }
+
+    .stretch-done-tag {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--green);
+    }
+
+    .stretch-locked { display: none; }
+
   </style>
 </head>
 <body>
