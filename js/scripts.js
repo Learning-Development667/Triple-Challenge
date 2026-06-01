@@ -172,7 +172,7 @@ function renderToday() {
     const warmupDone = todayLog._warmup === true;
     const cooldownDone = todayLog._cooldown === true;
     const exercisesDone = activeExercises.every(e => todayLog[e.key] !== undefined);
-    const canLogCooldown = warmupDone && exercisesDone;
+    const canLogCooldown = exercisesDone;
 
     // ---- WARM UP SECTION ----
     const warmupItems = warmUp.map(item => `
