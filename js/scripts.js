@@ -288,7 +288,7 @@ function renderToday() {
             ${stretchDone
               ? `<span class="stretch-done-tag">${getSVGIcon('tick', 13)} Done</span>`
               : canLogCooldown
-                ? `<button class="stretch-log-btn" onclick="logStretch(${idx})">DONE</button>`
+                ? `<button class="stretch-log-btn" data-stretch="${idx}" onclick="logStretch(${idx})">DONE</button>`
                 : `<span class="stretch-locked"></span>`
             }
           </div>
@@ -310,7 +310,7 @@ function renderToday() {
           ${cooldownAllDone
             ? `<div class="routine-tick">${getSVGIcon('tick', 16)}</div>`
             : canLogCooldown
-              ? `<span class="routine-locked-label">${Object.keys(cooldownLog).length}/${stretchCount} done</span>`
+              ? `<span class="routine-locked-label" id="cd-counter">${Object.keys(cooldownLog).length}/${stretchCount} done</span>`
               : `<span class="routine-locked-label">Complete exercises first</span>`
           }
         </div>
@@ -399,10 +399,10 @@ async function logWarmup() {
   const scrollTop = document.querySelector('.main-content')?.scrollTop || 0;
   await saveData();
   renderToday();
-  requestAnimationFrame(() => {
+  requestAnimationFrame(() => requestAnimationFrame(() => {
     const mc = document.querySelector('.main-content');
     if (mc) mc.scrollTop = scrollTop;
-  });
+  }));
 }
 
 async function logCooldown() {
@@ -427,18 +427,33 @@ async function logStretch(idx) {
   const dayData = getDayData(month, day);
   const cd = getCoolDown(dayData);
   const doneKeys = Object.keys(appData[currentUser].logs[logKey]._cooldownStretches);
-  if (doneKeys.length >= cd.length) {
+  const allStretchesDone = doneKeys.length >= cd.length;
+  if (allStretchesDone) {
     appData[currentUser].logs[logKey]._cooldown = true;
   }
-  // Save scroll position before re-render
-  const scrollTop = document.querySelector('.main-content')?.scrollTop || 0;
-  await saveData();
-  renderToday();
-  // Restore scroll position after render
-  requestAnimationFrame(() => {
-    const mc = document.querySelector('.main-content');
-    if (mc) mc.scrollTop = scrollTop;
-  });
+  saveData(); // fire and forget — don't await so UI updates instantly
+
+  // Update just the button in place — no full re-render, no scroll jump
+  const btn = document.querySelector(`[data-stretch="${idx}"]`);
+  if (btn) {
+    const row = btn.closest('.stretch-log-row');
+    if (row) {
+      row.innerHTML = `<span class="stretch-done-tag">${getSVGIcon('tick', 13)} Done</span>`;
+      btn.closest('.routine-item').classList.add('routine-item-done');
+    }
+  }
+
+  // Update the counter in cool down header
+  const counter = document.getElementById('cd-counter');
+  if (counter) {
+    const total = cd.length;
+    const done = doneKeys.length;
+    if (allStretchesDone) {
+      counter.outerHTML = `<div class="routine-tick">${getSVGIcon('tick', 16)}</div>`;
+    } else {
+      counter.textContent = `${done}/${total} done`;
+    }
+  }
 }
 
 // ---- ROUTINE TOGGLE ----
