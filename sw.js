@@ -1,6 +1,6 @@
 // Triple Challenge — Service Worker
 // Network-first: always fetches fresh, cache only as fallback
-const CACHE = 'triple-challenge-v9';
+const CACHE = 'triple-challenge-v10';
 
 self.addEventListener('install', e => {
   self.skipWaiting();
