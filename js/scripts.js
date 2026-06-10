@@ -736,6 +736,13 @@ function renderProgress() {
       const isPast = dayDate < today;
       const isToday = dayDate.getTime() === today.getTime();
 
+      // Past days collapse by default, colour-coded on the viewing user's completion
+      const isCollapsible = isPast && !isToday;
+      const viewerLog = appData[currentUser].logs[logKey] || {};
+      const dayComplete = ['plank', 'pushups', 'situps']
+        .filter(k => d[k] !== null)
+        .every(k => viewerLog[k] !== undefined);
+
       const exRow = (ex, target, mLog, sLog) => {
         if (target === null) {
           return `
@@ -761,11 +768,21 @@ function renderProgress() {
           </div>`;
       };
 
+      const cardClass = [
+        'prog-day-card',
+        isToday ? 'prog-today' : '',
+        isCollapsible ? 'prog-collapsible prog-collapsed' : '',
+        isCollapsible ? (dayComplete ? 'prog-complete' : 'prog-incomplete') : '',
+      ].filter(Boolean).join(' ');
+
       return `
-        <div class="prog-day-card ${isToday ? 'prog-today' : ''} ${isPast && !isToday ? 'prog-past' : ''}">
-          <div class="prog-day-header">
+        <div class="${cardClass}">
+          <div class="prog-day-header" ${isCollapsible ? 'onclick="toggleProgDay(this)"' : ''}>
             <span class="prog-day-num">${isToday ? '→ ' : ''}Day ${d.day}</span>
-            <span class="prog-day-date">${dayDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+            <div class="prog-day-meta">
+              <span class="prog-day-date">${dayDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+              ${isCollapsible ? `<span class="prog-day-chevron">${getSVGIcon('chevron')}</span>` : ''}
+            </div>
           </div>
           <div class="prog-ex-rows">
             <div class="prog-ex-header">
@@ -839,6 +856,12 @@ function switchProgTab(idx) {
     document.getElementById(`ptab${i}`).classList.toggle('active', i === idx);
     document.getElementById(`ptable${i}`).style.display = i === idx ? '' : 'none';
   });
+}
+
+// Expand / collapse a past day row on the progress screen
+function toggleProgDay(headerEl) {
+  const card = headerEl.closest('.prog-day-card');
+  if (card) card.classList.toggle('prog-collapsed');
 }
 
 // ============================================================
