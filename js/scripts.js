@@ -4,7 +4,7 @@
 // ============================================================
 
 // App version — bump the patch number on every change merged to main.
-const APP_VERSION = 'v1.0.9';
+const APP_VERSION = 'v1.0.10';
 
 const EFFORTS = [
   { key: 'easy',    label: 'Easy' },
@@ -19,7 +19,6 @@ const SETS_OPTIONS = [
 
 let currentUser = null;
 let appData = null;
-let notifTime = localStorage.getItem('notifTime') || '07:00';
 let notifEnabled = localStorage.getItem('notifEnabled') === 'true';
 let pendingLog = null;
 let pendingEffort = null;
@@ -911,17 +910,13 @@ function renderSettings() {
           <div class="settings-label">NOTIFICATIONS</div>
           <div class="settings-card">
             <div class="setting-row">
-              <span>Daily reminder</span>
+              <span>Daily reminder (07:00)</span>
               <label class="toggle">
                 <input type="checkbox" id="notifToggle" ${notifEnabled ? 'checked' : ''} onchange="toggleNotif()">
                 <span class="toggle-slider"></span>
               </label>
             </div>
-            <div class="setting-row">
-              <span>Reminder time</span>
-              <input type="time" class="time-input" id="notifTimeInput" value="${notifTime}" onchange="updateNotifTime()">
-            </div>
-            <div class="setting-hint" id="notifHint">${notifEnabled ? 'Notifications on' : 'Enable to get daily reminders'}</div>
+            <div class="setting-hint" id="notifHint">${notifEnabled ? 'On — daily reminder at 07:00' : 'Enable to get a daily 07:00 reminder'}</div>
           </div>
         </div>
         <div class="settings-section">
@@ -953,6 +948,9 @@ function renderSettings() {
       </main>
     </div>
   `);
+
+  // Reflect the real OneSignal subscription state in the toggle.
+  syncNotifToggle();
 }
 
 // ============================================================
@@ -1113,51 +1111,62 @@ async function backfillMeta(user, month, day, key) {
   renderBackfillDay(month, day);
 }
 
+// ---- NOTIFICATIONS (OneSignal web push) ----
+// Scheduling/sending of the daily 07:00 reminder is configured in the
+// OneSignal dashboard (a recurring message). The app only opts the user in
+// or out of push.
+
+function withOneSignal(cb) {
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  window.OneSignalDeferred.push(cb);
+}
+
 async function toggleNotif() {
-  const checked = document.getElementById('notifToggle').checked;
-  if (checked) {
-    const perm = await Notification.requestPermission();
-    if (perm !== 'granted') {
-      document.getElementById('notifToggle').checked = false;
-      document.getElementById('notifHint').textContent = 'Permission denied — check browser settings';
-      return;
-    }
-    notifEnabled = true;
-    localStorage.setItem('notifEnabled', 'true');
-    scheduleNotification();
-    document.getElementById('notifHint').textContent = 'Notifications on';
+  const toggle = document.getElementById('notifToggle');
+  const hint = document.getElementById('notifHint');
+  if (!toggle) return;
+
+  if (toggle.checked) {
+    // Must run in response to the user gesture for the iOS permission prompt.
+    withOneSignal(async (OneSignal) => {
+      try {
+        await OneSignal.Notifications.requestPermission();
+        if (OneSignal.Notifications.permission) {
+          await OneSignal.User.PushSubscription.optIn();
+          notifEnabled = true;
+          localStorage.setItem('notifEnabled', 'true');
+          if (hint) hint.textContent = 'On — daily reminder at 07:00';
+        } else {
+          toggle.checked = false;
+          notifEnabled = false;
+          localStorage.setItem('notifEnabled', 'false');
+          if (hint) hint.textContent = 'Permission denied — enable notifications in your device settings';
+        }
+      } catch (e) {
+        toggle.checked = false;
+        if (hint) hint.textContent = 'Could not enable notifications';
+      }
+    });
   } else {
     notifEnabled = false;
     localStorage.setItem('notifEnabled', 'false');
-    document.getElementById('notifHint').textContent = 'Notifications off';
+    if (hint) hint.textContent = 'Off';
+    withOneSignal(async (OneSignal) => {
+      try { await OneSignal.User.PushSubscription.optOut(); } catch (e) {}
+    });
   }
 }
 
-function updateNotifTime() {
-  notifTime = document.getElementById('notifTimeInput').value;
-  localStorage.setItem('notifTime', notifTime);
-  if (notifEnabled) scheduleNotification();
-}
-
-function scheduleNotification() {
-  if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  const [h, m] = notifTime.split(':').map(Number);
-  const now = new Date();
-  const next = new Date();
-  next.setHours(h, m, 0, 0);
-  if (next <= now) next.setDate(next.getDate() + 1);
-  setTimeout(() => {
-    const progress = getTodayProgress();
-    if (progress) {
-      new Notification('Triple Challenge', {
-        body: `Day ${progress.day} — time to train, ${currentUser.charAt(0).toUpperCase() + currentUser.slice(1)}!`,
-        icon: './icons/icon-192.png'
-      });
-    }
-    if (notifEnabled) setTimeout(scheduleNotification, 60000);
-  }, next - now);
-}
-
-if (notifEnabled && 'Notification' in window && Notification.permission === 'granted') {
-  setTimeout(scheduleNotification, 2000);
+// Reflect the real OneSignal subscription state in the settings toggle/hint.
+function syncNotifToggle() {
+  const toggle = document.getElementById('notifToggle');
+  const hint = document.getElementById('notifHint');
+  if (!toggle) return;
+  withOneSignal((OneSignal) => {
+    const optedIn = !!OneSignal.User.PushSubscription.optedIn;
+    toggle.checked = optedIn;
+    notifEnabled = optedIn;
+    localStorage.setItem('notifEnabled', optedIn ? 'true' : 'false');
+    if (hint) hint.textContent = optedIn ? 'On — daily reminder at 07:00' : 'Enable to get a daily 07:00 reminder';
+  });
 }
