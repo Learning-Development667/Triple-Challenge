@@ -145,6 +145,127 @@ function showLoading() {
 //  TODAY VIEW
 // ============================================================
 
+// ---- SECTION BUILDERS (shared by full render and in-place updates) ----
+
+function buildProgressRing(doneCount, totalCount, allDone) {
+  return `
+        <div class="day-progress-ring" id="today-ring">
+          <svg viewBox="0 0 44 44">
+            <circle cx="22" cy="22" r="18" fill="none" stroke="#2a2a2a" stroke-width="4"/>
+            <circle cx="22" cy="22" r="18" fill="none" stroke="${allDone ? '#27ae60' : '#c0392b'}" stroke-width="4"
+              stroke-dasharray="${Math.round((doneCount / totalCount) * 113)} 113"
+              stroke-linecap="round" transform="rotate(-90 22 22)"/>
+          </svg>
+          <span class="ring-text">${doneCount}/${totalCount}</span>
+        </div>`;
+}
+
+function buildWarmupSection(warmUp, warmupDone) {
+  const warmupItems = warmUp.map(item => `
+      <div class="routine-item">
+        <div class="routine-item-header">
+          <span class="routine-item-name">${item.name}</span>
+          <span class="routine-item-duration">${item.duration}</span>
+        </div>
+        <p class="routine-item-desc">${item.desc}</p>
+      </div>
+    `).join('');
+
+  return `
+      <div class="routine-section ${warmupDone ? 'routine-done' : ''}" id="warmup-section">
+        <div class="routine-header">
+          <div class="routine-title-row">
+            <span class="routine-icon">${getSVGIcon('warmup')}</span>
+            <span class="routine-title">WARM UP</span>
+          </div>
+          ${warmupDone
+            ? `<div class="routine-tick">${getSVGIcon('tick', 16)}</div>`
+            : `<button class="routine-log-btn" id="warmup-log-btn" onclick="logWarmup()">DONE</button>`
+          }
+        </div>
+        <div class="routine-items">${warmupItems}</div>
+      </div>
+    `;
+}
+
+function buildCooldownSection(coolDown, todayLog, canLogCooldown) {
+  const cooldownDone = todayLog._cooldown === true;
+  const cooldownLog = todayLog._cooldownStretches || {};
+
+  const cooldownItems = coolDown.map((item, idx) => {
+    const stretchKey = `stretch_${idx}`;
+    const stretchDone = cooldownLog[stretchKey] === true;
+    return `
+        <div class="routine-item ${stretchDone ? 'routine-item-done' : ''}">
+          <div class="routine-item-header">
+            <span class="routine-item-name">${item.name}</span>
+            <span class="routine-item-duration">${item.duration}</span>
+          </div>
+          <p class="routine-item-desc">${item.desc}</p>
+          <div class="stretch-log-row">
+            ${stretchDone
+              ? `<span class="stretch-done-tag">${getSVGIcon('tick', 13)} Done</span>`
+              : canLogCooldown
+                ? `<button class="stretch-log-btn" data-stretch="${idx}" onclick="logStretch(${idx})">DONE</button>`
+                : `<span class="stretch-locked"></span>`
+            }
+          </div>
+        </div>`;
+  }).join('');
+
+  const stretchCount = coolDown.length;
+  const stretchesDone = Object.keys(cooldownLog).length >= stretchCount;
+  const cooldownAllDone = cooldownDone || stretchesDone;
+
+  return `
+      <div class="routine-section ${cooldownAllDone ? 'routine-done' : ''} ${!canLogCooldown && !cooldownAllDone ? 'routine-locked' : ''}" id="cooldown-section">
+        <div class="routine-header">
+          <div class="routine-title-row">
+            <span class="routine-icon">${getSVGIcon('cooldown')}</span>
+            <span class="routine-title">COOL DOWN</span>
+          </div>
+          ${cooldownAllDone
+            ? `<div class="routine-tick">${getSVGIcon('tick', 16)}</div>`
+            : canLogCooldown
+              ? `<span class="routine-locked-label" id="cd-counter">${Object.keys(cooldownLog).length}/${stretchCount} done</span>`
+              : `<span class="routine-locked-label">Complete exercises first</span>`
+          }
+        </div>
+        <div class="routine-items">${cooldownItems}</div>
+      </div>
+    `;
+}
+
+// Recompute the progress ring + completion banner in place (no scroll jump)
+function refreshTodayProgress(progress) {
+  if (!progress) return;
+  const { month, day } = progress;
+  const dayData = getDayData(month, day);
+  const logKey = `m${month}d${day}`;
+  const todayLog = appData[currentUser].logs[logKey] || {};
+
+  const exercises = [
+    { key: 'plank',   target: dayData.plank },
+    { key: 'pushups', target: dayData.pushups },
+    { key: 'situps',  target: dayData.situps },
+  ];
+  const activeExercises = exercises.filter(e => e.target !== null);
+  const restCount = exercises.filter(e => e.target === null).length;
+  const doneCount = activeExercises.filter(e => todayLog[e.key] !== undefined).length + restCount;
+  const totalCount = 3;
+  const exercisesDone = activeExercises.every(e => todayLog[e.key] !== undefined);
+  const warmupDone = todayLog._warmup === true;
+  const cooldownLog = todayLog._cooldownStretches || {};
+  const stretchesDone = Object.keys(cooldownLog).length >= getCoolDown(dayData).length;
+  const allDone = warmupDone && exercisesDone && (todayLog._cooldown === true || stretchesDone);
+
+  const ringEl = document.getElementById('today-ring');
+  if (ringEl) ringEl.outerHTML = buildProgressRing(doneCount, totalCount, allDone);
+
+  const bannerEl = document.getElementById('today-banner');
+  if (bannerEl) bannerEl.innerHTML = allDone ? `<div class="all-done-banner">Day ${day} complete — well done!</div>` : '';
+}
+
 function renderToday() {
   const progress = getTodayProgress();
   const userData = appData[currentUser];
@@ -175,31 +296,7 @@ function renderToday() {
     const canLogCooldown = exercisesDone;
 
     // ---- WARM UP SECTION ----
-    const warmupItems = warmUp.map(item => `
-      <div class="routine-item">
-        <div class="routine-item-header">
-          <span class="routine-item-name">${item.name}</span>
-          <span class="routine-item-duration">${item.duration}</span>
-        </div>
-        <p class="routine-item-desc">${item.desc}</p>
-      </div>
-    `).join('');
-
-    const warmupSection = `
-      <div class="routine-section ${warmupDone ? 'routine-done' : ''}">
-        <div class="routine-header">
-          <div class="routine-title-row">
-            <span class="routine-icon">${getSVGIcon('warmup')}</span>
-            <span class="routine-title">WARM UP</span>
-          </div>
-          ${warmupDone
-            ? `<div class="routine-tick">${getSVGIcon('tick', 16)}</div>`
-            : `<button class="routine-log-btn" onclick="logWarmup()">DONE</button>`
-          }
-        </div>
-        <div class="routine-items">${warmupItems}</div>
-      </div>
-    `;
+    const warmupSection = buildWarmupSection(warmUp, warmupDone);
 
     // ---- EXERCISE CARDS ----
     const exerciseCards = exercises.map(ex => {
@@ -264,7 +361,7 @@ function renderToday() {
             <div class="ex-action">
               ${done
                 ? `<div class="done-tick">${getSVGIcon('tick')}</div>`
-                : `<button class="log-btn" onclick="openEffortPicker(${month}, ${day}, '${ex.key}')">LOG</button>`
+                : `<button class="log-btn" data-ex="${ex.key}" onclick="openEffortPicker(${month}, ${day}, '${ex.key}')">LOG</button>`
               }
             </div>
           </div>
@@ -274,49 +371,8 @@ function renderToday() {
 
     // ---- COOL DOWN SECTION ----
     const cooldownLog = todayLog._cooldownStretches || {};
-    const cooldownItems = coolDown.map((item, idx) => {
-      const stretchKey = `stretch_${idx}`;
-      const stretchDone = cooldownLog[stretchKey] === true;
-      return `
-        <div class="routine-item ${stretchDone ? 'routine-item-done' : ''}">
-          <div class="routine-item-header">
-            <span class="routine-item-name">${item.name}</span>
-            <span class="routine-item-duration">${item.duration}</span>
-          </div>
-          <p class="routine-item-desc">${item.desc}</p>
-          <div class="stretch-log-row">
-            ${stretchDone
-              ? `<span class="stretch-done-tag">${getSVGIcon('tick', 13)} Done</span>`
-              : canLogCooldown
-                ? `<button class="stretch-log-btn" data-stretch="${idx}" onclick="logStretch(${idx})">DONE</button>`
-                : `<span class="stretch-locked"></span>`
-            }
-          </div>
-        </div>`;
-    }).join('');
-
-    // Cool down is fully done when all stretches are logged
-    const stretchCount = coolDown.length;
-    const stretchesDone = Object.keys(cooldownLog).length >= stretchCount;
-    const cooldownAllDone = cooldownDone || stretchesDone;
-
-    const cooldownSection = `
-      <div class="routine-section ${cooldownAllDone ? 'routine-done' : ''} ${!canLogCooldown && !cooldownAllDone ? 'routine-locked' : ''}">
-        <div class="routine-header">
-          <div class="routine-title-row">
-            <span class="routine-icon">${getSVGIcon('cooldown')}</span>
-            <span class="routine-title">COOL DOWN</span>
-          </div>
-          ${cooldownAllDone
-            ? `<div class="routine-tick">${getSVGIcon('tick', 16)}</div>`
-            : canLogCooldown
-              ? `<span class="routine-locked-label" id="cd-counter">${Object.keys(cooldownLog).length}/${stretchCount} done</span>`
-              : `<span class="routine-locked-label">Complete exercises first</span>`
-          }
-        </div>
-        <div class="routine-items">${cooldownItems}</div>
-      </div>
-    `;
+    const stretchesDone = Object.keys(cooldownLog).length >= coolDown.length;
+    const cooldownSection = buildCooldownSection(coolDown, todayLog, canLogCooldown);
 
     // ---- COMPLETION GATE ----
     const allDone = warmupDone && exercisesDone && (cooldownDone || stretchesDone);
@@ -331,17 +387,9 @@ function renderToday() {
           <span class="day-num">DAY ${day}</span>
           <span class="month-label">MONTH ${month}</span>
         </div>
-        <div class="day-progress-ring">
-          <svg viewBox="0 0 44 44">
-            <circle cx="22" cy="22" r="18" fill="none" stroke="#2a2a2a" stroke-width="4"/>
-            <circle cx="22" cy="22" r="18" fill="none" stroke="${allDone ? '#27ae60' : '#c0392b'}" stroke-width="4"
-              stroke-dasharray="${Math.round((doneCount / totalCount) * 113)} 113"
-              stroke-linecap="round" transform="rotate(-90 22 22)"/>
-          </svg>
-          <span class="ring-text">${doneCount}/${totalCount}</span>
-        </div>
+        ${buildProgressRing(doneCount, totalCount, allDone)}
       </div>
-      ${allDoneBanner}
+      <div id="today-banner">${allDoneBanner}</div>
       ${warmupSection}
       <div class="exercises-list">${exerciseCards}</div>
       ${cooldownSection}
@@ -389,20 +437,21 @@ function renderToday() {
 
 // ---- WARM UP / COOL DOWN LOGGING ----
 
-async function logWarmup() {
+function logWarmup() {
   const progress = getTodayProgress();
   if (!progress) return;
   const { month, day } = progress;
   const logKey = `m${month}d${day}`;
   if (!appData[currentUser].logs[logKey]) appData[currentUser].logs[logKey] = {};
   appData[currentUser].logs[logKey]._warmup = true;
-  const scrollTop = document.querySelector('.main-content')?.scrollTop || 0;
-  await saveData();
-  renderToday();
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    const mc = document.querySelector('.main-content');
-    if (mc) mc.scrollTop = scrollTop;
-  }));
+  saveData(); // fire and forget — don't await so UI updates instantly
+
+  // Update just the warm up section in place — no full re-render, no scroll jump
+  const warmupEl = document.getElementById('warmup-section');
+  if (warmupEl) warmupEl.outerHTML = buildWarmupSection(getWarmUp(getDayData(month, day)), true);
+
+  // Completing the warm up may finish the day — refresh ring + banner
+  refreshTodayProgress(progress);
 }
 
 async function logCooldown() {
@@ -567,8 +616,8 @@ async function saveSetsBreakdown() {
     ts: Date.now()
   };
   closeAllModals();
-  await saveData();
-  renderToday();
+  saveData(); // fire and forget — don't await so UI updates instantly
+  applyExerciseLog(exercise);
 }
 
 function openEffortPicker(month, day, exercise) {
@@ -598,8 +647,58 @@ async function selectSets(setsKey) {
   if (!appData[currentUser].logs[logKey]) appData[currentUser].logs[logKey] = {};
   appData[currentUser].logs[logKey][exercise] = { effort: pendingEffort, sets: setsKey, breakdown: null, ts: Date.now() };
   closeAllModals();
-  await saveData();
-  renderToday();
+  saveData(); // fire and forget — don't await so UI updates instantly
+  applyExerciseLog(exercise);
+}
+
+// Reflect a freshly logged exercise in place — no full re-render, no scroll jump
+function applyExerciseLog(exercise) {
+  const progress = getTodayProgress();
+  if (!progress) return;
+  const { month, day } = progress;
+  const dayData = getDayData(month, day);
+  const logKey = `m${month}d${day}`;
+  const todayLog = appData[currentUser].logs[logKey] || {};
+  const logged = todayLog[exercise];
+
+  // Swap the LOG button for the done state on this exercise card
+  const btn = document.querySelector(`[data-ex="${exercise}"]`);
+  if (btn && logged) {
+    const card = btn.closest('.exercise-card');
+    const action = btn.closest('.ex-action');
+    if (action) action.innerHTML = `<div class="done-tick">${getSVGIcon('tick')}</div>`;
+    if (card) {
+      card.classList.add('done');
+      const info = card.querySelector('.ex-info');
+      const target = info ? info.querySelector('.ex-target') : null;
+      if (info && target && !info.querySelector('.ex-logged-row')) {
+        const effortLabel = EFFORTS.find(e => e.key === logged.effort)?.label || '';
+        const setsLabel = logged.sets === 'single' ? 'One sitting' : 'Sets';
+        const breakdownTag = logged.breakdown
+          ? `<span class="logged-tag breakdown-tag">${logged.breakdown}</span>`
+          : '';
+        target.insertAdjacentHTML('afterend', `
+          <div class="ex-logged-row">
+            <span class="logged-tag effort-${logged.effort}">${getSVGIcon(logged.effort, 14)} ${effortLabel}</span>
+            <span class="logged-tag">${getSVGIcon(logged.sets, 14)} ${setsLabel}</span>
+            ${breakdownTag}
+          </div>`);
+      }
+    }
+  }
+
+  // Logging the last exercise unlocks the cool down — refresh that section in place
+  const exercises = [
+    { key: 'plank',   target: dayData.plank },
+    { key: 'pushups', target: dayData.pushups },
+    { key: 'situps',  target: dayData.situps },
+  ];
+  const exercisesDone = exercises.filter(e => e.target !== null).every(e => todayLog[e.key] !== undefined);
+  const cdEl = document.getElementById('cooldown-section');
+  if (cdEl) cdEl.outerHTML = buildCooldownSection(getCoolDown(dayData), todayLog, exercisesDone);
+
+  // Update the progress ring + completion banner
+  refreshTodayProgress(progress);
 }
 
 function closeAllModals() {
