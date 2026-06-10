@@ -16,3 +16,11 @@ Notes:
 - Pushes from cloud sessions can only go to `claude/*` branches (the GitHub
   proxy blocks direct pushes to `main`), which is why changes reach `main` via
   a PR that is then merged, rather than a direct push.
+
+## Versioning
+
+Every time you make a change and merge it to `main`, increment the patch
+version number (the last digit) by 1: `v1.0.5` → `v1.0.6` → `v1.0.7`, and so
+on. The version lives in the `APP_VERSION` constant in `js/scripts.js` and is
+shown at the bottom of the home screen. Bump it as part of the same change you
+are merging.

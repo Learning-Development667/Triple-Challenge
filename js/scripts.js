@@ -3,6 +3,9 @@
 //  Credentials are in config.js — do not add them here.
 // ============================================================
 
+// App version — bump the patch number on every change merged to main.
+const APP_VERSION = 'v1.0.5';
+
 const EFFORTS = [
   { key: 'easy',    label: 'Easy' },
   { key: 'neutral', label: 'Neutral' },
@@ -427,6 +430,7 @@ function renderToday() {
           <div class="partner-label">${partnerLabel}</div>
           <div class="partner-info">${partnerSummary}</div>
         </div>
+        <div class="app-version">${APP_VERSION}</div>
       </main>
     </div>
     ${renderEffortModal()}
