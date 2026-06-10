@@ -858,6 +858,37 @@
     .prog-day-card.prog-today { border-color: rgba(229,57,53,0.45); }
     .prog-day-card.prog-past { opacity: 0.65; }
 
+    /* Collapsible past days */
+    .prog-day-card.prog-collapsible .prog-day-header { cursor: pointer; }
+    .prog-day-card.prog-collapsed .prog-ex-rows { display: none; }
+
+    .prog-day-card.prog-complete { border-color: var(--green-b); }
+    .prog-day-card.prog-complete .prog-day-header {
+      background: var(--green-dim);
+      border-bottom-color: rgba(67,160,71,0.3);
+    }
+    .prog-day-card.prog-complete .prog-day-num { color: var(--green-b); }
+
+    .prog-day-card.prog-incomplete { border-color: var(--red); }
+    .prog-day-card.prog-incomplete .prog-day-header {
+      background: var(--red-dim);
+      border-bottom-color: rgba(229,57,53,0.3);
+    }
+    .prog-day-card.prog-incomplete .prog-day-num { color: var(--red); }
+
+    .prog-day-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .prog-day-chevron {
+      display: inline-flex;
+      color: var(--grey);
+      transition: transform 0.2s ease;
+    }
+    .prog-day-card.prog-collapsed .prog-day-chevron { transform: rotate(-90deg); }
+
     .prog-day-header {
       display: flex;
       justify-content: space-between;
