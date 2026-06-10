@@ -4,7 +4,7 @@
 // ============================================================
 
 // App version — bump the patch number on every change merged to main.
-const APP_VERSION = 'v1.0.7';
+const APP_VERSION = 'v1.0.8';
 
 const EFFORTS = [
   { key: 'easy',    label: 'Easy' },
@@ -72,7 +72,7 @@ function registerSW() {
 async function loadData() {
   try {
     const res = await fetch(BIN_URL + '/latest', {
-      headers: { 'X-Master-Key': API_KEY }
+      headers: { 'X-Access-Key': ACCESS_KEY }
     });
     if (!res.ok) throw new Error('fetch failed');
     const json = await res.json();
@@ -92,7 +92,7 @@ async function saveData() {
   try {
     await fetch(BIN_URL, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
+      headers: { 'Content-Type': 'application/json', 'X-Access-Key': ACCESS_KEY },
       body: JSON.stringify(appData)
     });
   } catch (e) {}
