@@ -4,7 +4,7 @@
 // ============================================================
 
 // App version — bump the patch number on every change merged to main.
-const APP_VERSION = 'v1.0.8';
+const APP_VERSION = 'v1.0.9';
 
 const EFFORTS = [
   { key: 'easy',    label: 'Easy' },
@@ -44,6 +44,7 @@ function getSVGIcon(name, size = 28) {
     tick: `<svg width="18" height="18" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><polyline points="6,17 13,24 26,9" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
     warmup: `<svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 4 C16 4 10 10 10 16 C10 19.3 12.7 22 16 22 C19.3 22 22 19.3 22 16 C22 10 16 4 16 4Z" stroke="currentColor" stroke-width="2" fill="none"/><path d="M16 22 L16 28" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="28" x2="20" y2="28" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
     cooldown: `<svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 6 L16 26 M8 10 L16 6 L24 10 M8 22 L16 26 L24 22 M6 16 L26 16 M6 16 L10 12 M6 16 L10 20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`,
+    dumbbell: `<svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="11" y1="16" x2="21" y2="16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect x="4" y="11" width="4" height="10" rx="1.5" fill="currentColor"/><rect x="24" y="11" width="4" height="10" rx="1.5" fill="currentColor"/><rect x="9" y="13" width="2.5" height="6" rx="1" fill="currentColor"/><rect x="20.5" y="13" width="2.5" height="6" rx="1" fill="currentColor"/></svg>`,
     formguide: `<svg width="16" height="16" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="12" stroke="currentColor" stroke-width="2"/><line x1="16" y1="14" x2="16" y2="22" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><circle cx="16" cy="10" r="1.5" fill="currentColor"/></svg>`,
     chevron: `<svg width="14" height="14" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><polyline points="8,12 16,20 24,12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
   };
@@ -177,17 +178,18 @@ function buildWarmupSection(warmUp, warmupDone) {
 
   return `
       <div class="routine-section ${warmupDone ? 'routine-done' : ''}" id="warmup-section">
-        <div class="routine-header">
+        <div class="routine-header" onclick="toggleSection(this)">
           <div class="routine-title-row">
             <span class="routine-icon">${getSVGIcon('warmup')}</span>
             <span class="routine-title">WARM UP</span>
+            <span class="section-chevron">${getSVGIcon('chevron')}</span>
           </div>
           ${warmupDone
             ? `<div class="routine-tick">${getSVGIcon('tick', 16)}</div>`
-            : `<button class="routine-log-btn" id="warmup-log-btn" onclick="logWarmup()">DONE</button>`
+            : `<button class="routine-log-btn" id="warmup-log-btn" onclick="event.stopPropagation(); logWarmup()">DONE</button>`
           }
         </div>
-        <div class="routine-items">${warmupItems}</div>
+        <div class="routine-items" style="display:none">${warmupItems}</div>
       </div>
     `;
 }
@@ -223,10 +225,11 @@ function buildCooldownSection(coolDown, todayLog, canLogCooldown) {
 
   return `
       <div class="routine-section ${cooldownAllDone ? 'routine-done' : ''} ${!canLogCooldown && !cooldownAllDone ? 'routine-locked' : ''}" id="cooldown-section">
-        <div class="routine-header">
+        <div class="routine-header" onclick="toggleSection(this)">
           <div class="routine-title-row">
             <span class="routine-icon">${getSVGIcon('cooldown')}</span>
             <span class="routine-title">COOL DOWN</span>
+            <span class="section-chevron">${getSVGIcon('chevron')}</span>
           </div>
           ${cooldownAllDone
             ? `<div class="routine-tick">${getSVGIcon('tick', 16)}</div>`
@@ -235,7 +238,7 @@ function buildCooldownSection(coolDown, todayLog, canLogCooldown) {
               : `<span class="routine-locked-label">Complete exercises first</span>`
           }
         </div>
-        <div class="routine-items">${cooldownItems}</div>
+        <div class="routine-items" style="display:none">${cooldownItems}</div>
       </div>
     `;
 }
@@ -395,7 +398,16 @@ function renderToday() {
       </div>
       <div id="today-banner">${allDoneBanner}</div>
       ${warmupSection}
-      <div class="exercises-list">${exerciseCards}</div>
+      <div class="routine-section" id="exercises-section">
+        <div class="routine-header" onclick="toggleSection(this)">
+          <div class="routine-title-row">
+            <span class="routine-icon">${getSVGIcon('dumbbell')}</span>
+            <span class="routine-title">EXERCISES</span>
+            <span class="section-chevron">${getSVGIcon('chevron')}</span>
+          </div>
+        </div>
+        <div class="routine-items exercises-list" style="display:none">${exerciseCards}</div>
+      </div>
       ${cooldownSection}
     `;
   }
@@ -510,15 +522,19 @@ async function logStretch(idx) {
   }
 }
 
-// ---- ROUTINE TOGGLE ----
+// ---- SECTION TOGGLE (warm up / exercises / cool down) ----
 
-function toggleRoutine(key) {
-  const items = document.getElementById(`ri-${key}`);
-  const chevron = document.getElementById(`rc-${key}`);
+// Expand/collapse a daily-screen section. Driven by inline styles so it works
+// even if the stylesheet is served stale from cache.
+function toggleSection(headerEl) {
+  const section = headerEl.closest('.routine-section');
+  if (!section) return;
+  const items = section.querySelector('.routine-items');
   if (!items) return;
-  const isOpen = items.style.display !== 'none';
-  items.style.display = isOpen ? 'none' : 'block';
-  if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+  const collapsed = items.style.display === 'none';
+  items.style.display = collapsed ? '' : 'none';
+  const chevron = section.querySelector('.section-chevron');
+  if (chevron) chevron.style.transform = collapsed ? 'rotate(180deg)' : '';
 }
 
 // ---- FORM GUIDE TOGGLE ----
