@@ -4,7 +4,7 @@
 // ============================================================
 
 // App version — bump the patch number on every change merged to main.
-const APP_VERSION = 'v1.0.6';
+const APP_VERSION = 'v1.0.7';
 
 const EFFORTS = [
   { key: 'easy',    label: 'Easy' },
@@ -789,7 +789,7 @@ function renderProgress() {
               ${isCollapsible ? `<span class="prog-day-chevron">${getSVGIcon('chevron')}</span>` : ''}
             </div>
           </div>
-          <div class="prog-ex-rows">
+          <div class="prog-ex-rows"${isCollapsible ? ' style="display:none"' : ''}>
             <div class="prog-ex-header">
               <span></span><span class="prog-user-label">MARK</span><span class="prog-user-label">SHELLEY</span>
             </div>
@@ -866,7 +866,12 @@ function switchProgTab(idx) {
 // Expand / collapse a past day row on the progress screen
 function toggleProgDay(headerEl) {
   const card = headerEl.closest('.prog-day-card');
-  if (card) card.classList.toggle('prog-collapsed');
+  if (!card) return;
+  const collapsed = card.classList.toggle('prog-collapsed');
+  // Drive the show/hide from an inline style so it does not depend on the
+  // stylesheet (which can be served stale from cache).
+  const rows = card.querySelector('.prog-ex-rows');
+  if (rows) rows.style.display = collapsed ? 'none' : '';
 }
 
 // ============================================================
