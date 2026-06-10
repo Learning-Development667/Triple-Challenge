@@ -4,7 +4,7 @@
 // ============================================================
 
 // App version — bump the patch number on every change merged to main.
-const APP_VERSION = 'v1.0.10';
+const APP_VERSION = 'v1.0.11';
 
 const EFFORTS = [
   { key: 'easy',    label: 'Easy' },
@@ -1121,49 +1121,61 @@ function withOneSignal(cb) {
   window.OneSignalDeferred.push(cb);
 }
 
+// True once the OneSignal SDK has loaded and replaced the deferred stub.
+function oneSignalReady() {
+  return !!(window.OneSignal && window.OneSignal.Notifications && window.OneSignal.User);
+}
+
 async function toggleNotif() {
   const toggle = document.getElementById('notifToggle');
   const hint = document.getElementById('notifHint');
   if (!toggle) return;
 
+  // Call OneSignal directly (NOT via the deferred queue) so the permission
+  // prompt stays inside the tap's user gesture — required on iOS, otherwise
+  // the request is silently ignored and the toggle appears to do nothing.
+  if (!oneSignalReady()) {
+    toggle.checked = false;
+    if (hint) hint.textContent = 'Notifications are still loading — try again in a moment.';
+    return;
+  }
+  const OneSignal = window.OneSignal;
+
   if (toggle.checked) {
-    // Must run in response to the user gesture for the iOS permission prompt.
-    withOneSignal(async (OneSignal) => {
-      try {
-        await OneSignal.Notifications.requestPermission();
-        if (OneSignal.Notifications.permission) {
-          await OneSignal.User.PushSubscription.optIn();
-          notifEnabled = true;
-          localStorage.setItem('notifEnabled', 'true');
-          if (hint) hint.textContent = 'On — daily reminder at 07:00';
-        } else {
-          toggle.checked = false;
-          notifEnabled = false;
-          localStorage.setItem('notifEnabled', 'false');
-          if (hint) hint.textContent = 'Permission denied — enable notifications in your device settings';
-        }
-      } catch (e) {
+    try {
+      await OneSignal.Notifications.requestPermission();
+      if (OneSignal.Notifications.permission) {
+        await OneSignal.User.PushSubscription.optIn();
+        notifEnabled = true;
+        localStorage.setItem('notifEnabled', 'true');
+        if (hint) hint.textContent = 'On — daily reminder at 07:00';
+      } else {
         toggle.checked = false;
-        if (hint) hint.textContent = 'Could not enable notifications';
+        notifEnabled = false;
+        localStorage.setItem('notifEnabled', 'false');
+        if (hint) hint.textContent = 'Permission denied — enable notifications in your device settings.';
       }
-    });
+    } catch (e) {
+      toggle.checked = false;
+      if (hint) hint.textContent = 'Could not enable notifications: ' + ((e && e.message) || 'unknown error');
+    }
   } else {
     notifEnabled = false;
     localStorage.setItem('notifEnabled', 'false');
     if (hint) hint.textContent = 'Off';
-    withOneSignal(async (OneSignal) => {
-      try { await OneSignal.User.PushSubscription.optOut(); } catch (e) {}
-    });
+    try { await OneSignal.User.PushSubscription.optOut(); } catch (e) {}
   }
 }
 
 // Reflect the real OneSignal subscription state in the settings toggle/hint.
+// Runs once the SDK is ready (queued via the deferred stub if it isn't yet).
 function syncNotifToggle() {
   const toggle = document.getElementById('notifToggle');
-  const hint = document.getElementById('notifHint');
   if (!toggle) return;
   withOneSignal((OneSignal) => {
-    const optedIn = !!OneSignal.User.PushSubscription.optedIn;
+    const hint = document.getElementById('notifHint');
+    const sub = OneSignal.User && OneSignal.User.PushSubscription;
+    const optedIn = !!(sub && sub.optedIn);
     toggle.checked = optedIn;
     notifEnabled = optedIn;
     localStorage.setItem('notifEnabled', optedIn ? 'true' : 'false');
