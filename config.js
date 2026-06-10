@@ -10,6 +10,6 @@ const BIN_ID = '6a1c638621f9ee59d2a1ac2c';
 // JSONBin Access Key scoped to READ + UPDATE on this bin ONLY.
 // Create it in the JSONBin dashboard (Access Keys) and paste it here.
 // Do NOT use the account Master Key — it can read/write/delete everything.
-const ACCESS_KEY = 'REPLACE_WITH_SCOPED_JSONBIN_ACCESS_KEY';
+const ACCESS_KEY = '$2a$10$sHg9a2hzxcCIgr7U50v9cuvc0UWOr1xsEACw60zmRhNdB/Bx6wWC2';
 
 const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
