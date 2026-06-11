@@ -355,6 +355,20 @@
       padding-top: 0;
     }
 
+    .check-updates {
+      background: none;
+      border: none;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      opacity: 0.85;
+      padding: 2px 6px;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .check-updates:active { opacity: 1; }
+
     /* ── MAIN SCREEN ──────────────────────────────────────── */
     .main-screen {
       display: flex;
@@ -557,6 +571,10 @@
       opacity: 0.3;
     }
 
+    /* Locked Exercises section (until warm up is done) */
+    .routine-section.section-locked .routine-header { cursor: default; }
+    .routine-section.section-locked .log-btn { pointer-events: none; }
+
     .routine-header {
       display: flex;
       align-items: center;
@@ -609,11 +627,15 @@
     }
 
     .routine-locked-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
       font-family: var(--mono);
       font-size: 9px;
       letter-spacing: 0.12em;
       color: var(--grey);
       text-transform: uppercase;
+      white-space: nowrap;
     }
 
     .routine-items {
