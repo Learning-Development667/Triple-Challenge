@@ -182,7 +182,9 @@
 
     /* Rotating electric-blue arc: a conic-gradient masked to a thin edge strip
        so only the arc segment shows — a subtle futuristic scanning border. */
-    .user-card::before {
+    .user-card::before,
+    .day-header::before,
+    .routine-section::before {
       content: '';
       position: absolute;
       inset: 0;
@@ -199,6 +201,7 @@
               mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
               mask-composite: exclude;
       pointer-events: none;
+      z-index: 2;
       animation: user-card-arc 3.6s linear infinite;
     }
 
@@ -310,6 +313,7 @@
 
     /* ── DAY HEADER CARD ──────────────────────────────────── */
     .day-header {
+      position: relative;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -317,6 +321,7 @@
       border: 1px solid var(--border);
       border-radius: var(--r-lg);
       padding: 20px 24px;
+      animation: user-card-breathe 3.6s ease-in-out infinite;
     }
 
     .day-badge { display: flex; flex-direction: column; gap: 2px; }
@@ -340,6 +345,15 @@
       position: relative;
       width: 60px; height: 60px;
       flex-shrink: 0;
+    }
+
+    /* All exercises complete — gold glow on the ring. */
+    .day-progress-ring.ring-complete {
+      animation: ring-gold-glow 2.4s ease-in-out infinite;
+    }
+    @keyframes ring-gold-glow {
+      0%, 100% { filter: drop-shadow(0 0 3px rgba(245,166,35,0.5)); }
+      50%      { filter: drop-shadow(0 0 8px rgba(245,166,35,0.9)); }
     }
 
     .day-progress-ring svg { width: 100%; height: 100%; }
@@ -370,9 +384,11 @@
 
     /* ── SECTION BLOCKS (WARM UP / COOL DOWN) ─────────────── */
     .routine-section {
+      position: relative;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--r-lg);
+      animation: user-card-breathe 3.6s ease-in-out infinite;
     }
 
     .routine-section.routine-done {
