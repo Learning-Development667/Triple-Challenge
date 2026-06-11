@@ -4,7 +4,7 @@
 // ============================================================
 
 // App version — bump the patch number on every change merged to main.
-const APP_VERSION = 'v1.7.1';
+const APP_VERSION = 'v1.8.0';
 
 const EFFORTS = [
   { key: 'easy',    label: 'Easy' },
@@ -46,7 +46,8 @@ function getSVGIcon(name, size = 28) {
     dumbbell: `<svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="11" y1="16" x2="21" y2="16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect x="4" y="11" width="4" height="10" rx="1.5" fill="currentColor"/><rect x="24" y="11" width="4" height="10" rx="1.5" fill="currentColor"/><rect x="9" y="13" width="2.5" height="6" rx="1" fill="currentColor"/><rect x="20.5" y="13" width="2.5" height="6" rx="1" fill="currentColor"/></svg>`,
     formguide: `<svg width="16" height="16" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="12" stroke="currentColor" stroke-width="2"/><line x1="16" y1="14" x2="16" y2="22" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><circle cx="16" cy="10" r="1.5" fill="currentColor"/></svg>`,
     chevron: `<svg width="14" height="14" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><polyline points="8,12 16,20 24,12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-    back: `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><polyline points="19,7 11,16 19,25" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+    back: `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><polyline points="19,7 11,16 19,25" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    lock: `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="14" width="16" height="12" rx="2" stroke="currentColor" stroke-width="2"/><path d="M11 14 v-3 a5 5 0 0 1 10 0 v3" stroke="currentColor" stroke-width="2" fill="none"/></svg>`
   };
   return icons[name] || '';
 }
@@ -67,6 +68,22 @@ function registerSW() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
+}
+
+// Force a fresh copy of the app: unregister the service worker, clear every
+// cache, then reload.
+async function checkForUpdates() {
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+    if (window.caches && caches.keys) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+  } catch (e) {}
+  location.reload();
 }
 
 // ============================================================
@@ -176,12 +193,26 @@ function getLastActive(user) {
   return `${days} days ago`;
 }
 
-function renderUserSelect() {
-  const dIdx = currentDayIndex();
-  const currentDay = Math.min(Math.max(dIdx + 1, 1), 90);
-  const pct = Math.max(0, Math.min(100, Math.round(((dIdx + 1) / 90) * 100)));
-  const challengeComplete = (dIdx + 1) >= 90;
+// Per-user completion across the whole 90-day programme (exercises logged vs
+// total active exercises) — matches the Progress screen's stats exactly.
+function getUserCompletion(user) {
+  const logs = (appData[user] && appData[user].logs) || {};
+  let total = 0, done = 0;
+  for (let m = 1; m <= 3; m++) {
+    CHALLENGE_DATA[`month${m}`].days.forEach(d => {
+      ['plank', 'pushups', 'situps'].forEach(ex => {
+        if (d[ex] !== null) {
+          total++;
+          if (logs[`m${m}d${d.day}`] && logs[`m${m}d${d.day}`][ex] !== undefined) done++;
+        }
+      });
+    });
+  }
+  const frac = total > 0 ? done / total : 0;
+  return { done, total, pct: Math.round(frac * 100), dayX: Math.round(frac * 90) };
+}
 
+function renderUserSelect() {
   // Rotate the quote on each visit.
   let qi = parseInt(localStorage.getItem('homeQuoteIdx') || '0', 10);
   if (isNaN(qi) || qi < 0) qi = 0;
@@ -191,11 +222,12 @@ function renderUserSelect() {
   const userCard = (user, name) => {
     const streak = getUserStreak(user);
     const lastActive = getLastActive(user);
+    const comp = getUserCompletion(user);
     return `
         <button class="user-card photo-card" onclick="selectUser('${user}')">
           <div class="photo-wrap">
             <img src="./images/${user}.png" alt="${name}" class="user-photo">
-            <span class="day-badge-overlay">Day ${currentDay} of 90</span>
+            <span class="day-badge-overlay">Day ${comp.dayX} of 90</span>
           </div>
           <div class="user-card-body">
             <span class="user-name">${name.toUpperCase()}</span>
@@ -203,9 +235,9 @@ function renderUserSelect() {
             <span class="user-streak">🔥 ${streak} day streak</span>
             <div class="user-progress">
               <div class="user-progress-bar">
-                <div class="user-progress-fill${challengeComplete ? ' complete' : ''}" style="width:${pct}%"></div>
+                <div class="user-progress-fill${comp.pct >= 100 ? ' complete' : ''}" style="width:${comp.pct}%"></div>
               </div>
-              <span class="user-progress-pct">${pct}%</span>
+              <span class="user-progress-pct">${comp.pct}%</span>
             </div>
           </div>
         </button>`;
@@ -225,6 +257,7 @@ function renderUserSelect() {
       <div class="home-footer">
         <img src="./images/mark_one_log.png" alt="Mark One Apps" class="mark-one-logo">
         <div class="app-version">&copy; 2026 Mark 1 Apps &middot; ${APP_VERSION}</div>
+        <button class="check-updates" onclick="checkForUpdates()">Check for updates</button>
       </div>
     </div>
   `);
@@ -308,6 +341,40 @@ function buildWarmupSection(warmUp, warmupDone) {
         <div class="routine-items" style="display:none">${warmupItems}</div>
       </div>
     `;
+}
+
+// Exercises section — locked (no toggle, dimmed, "Warm up first") until the
+// warm up is marked done, then it unlocks.
+function buildExercisesSection(exerciseCards, warmupDone) {
+  const locked = !warmupDone;
+  return `
+      <div class="routine-section ${locked ? 'routine-locked section-locked' : ''}" id="exercises-section">
+        <div class="routine-header" ${locked ? '' : 'onclick="toggleSection(this)"'}>
+          <div class="routine-title-row">
+            <span class="routine-icon">${getSVGIcon('dumbbell')}</span>
+            <span class="routine-title">EXERCISES</span>
+            ${locked ? '' : `<span class="section-chevron">${getSVGIcon('chevron')}</span>`}
+          </div>
+          ${locked ? `<span class="routine-locked-label">${getSVGIcon('lock', 13)} Warm up first</span>` : ''}
+        </div>
+        <div class="routine-items exercises-list" style="display:none">${exerciseCards}</div>
+      </div>`;
+}
+
+// Unlock the exercises section in place (keeps the already-rendered cards).
+function unlockExercises() {
+  const sec = document.getElementById('exercises-section');
+  if (!sec) return;
+  sec.classList.remove('routine-locked', 'section-locked');
+  const header = sec.querySelector('.routine-header');
+  if (!header) return;
+  header.setAttribute('onclick', 'toggleSection(this)');
+  const lockedLabel = header.querySelector('.routine-locked-label');
+  if (lockedLabel) lockedLabel.remove();
+  const titleRow = header.querySelector('.routine-title-row');
+  if (titleRow && !titleRow.querySelector('.section-chevron')) {
+    titleRow.insertAdjacentHTML('beforeend', `<span class="section-chevron">${getSVGIcon('chevron')}</span>`);
+  }
 }
 
 function buildCooldownSection(coolDown, todayLog, canLogCooldown) {
@@ -514,16 +581,7 @@ function renderToday() {
       </div>
       <div id="today-banner">${allDoneBanner}</div>
       ${warmupSection}
-      <div class="routine-section" id="exercises-section">
-        <div class="routine-header" onclick="toggleSection(this)">
-          <div class="routine-title-row">
-            <span class="routine-icon">${getSVGIcon('dumbbell')}</span>
-            <span class="routine-title">EXERCISES</span>
-            <span class="section-chevron">${getSVGIcon('chevron')}</span>
-          </div>
-        </div>
-        <div class="routine-items exercises-list" style="display:none">${exerciseCards}</div>
-      </div>
+      ${buildExercisesSection(exerciseCards, warmupDone)}
       ${cooldownSection}
     `;
   }
@@ -582,6 +640,9 @@ function logWarmup() {
   // Update just the warm up section in place — no full re-render, no scroll jump
   const warmupEl = document.getElementById('warmup-section');
   if (warmupEl) warmupEl.outerHTML = buildWarmupSection(getWarmUp(getDayData(month, day)), true);
+
+  // Warm up done -> unlock the Exercises section.
+  unlockExercises();
 
   // Completing the warm up may finish the day — refresh ring + banner
   refreshTodayProgress(progress);
@@ -995,20 +1056,7 @@ function renderProgress() {
 function renderOverallStats() {
   const users = ['mark', 'shelley'];
   const stats = users.map(u => {
-    const logs = appData[u].logs;
-    let total = 0, done = 0;
-    for (let m = 1; m <= 3; m++) {
-      const days = CHALLENGE_DATA[`month${m}`].days;
-      days.forEach(d => {
-        ['plank', 'pushups', 'situps'].forEach(ex => {
-          if (d[ex] !== null) {
-            total++;
-            if (logs[`m${m}d${d.day}`]?.[ex] !== undefined) done++;
-          }
-        });
-      });
-    }
-    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+    const { done, total, pct } = getUserCompletion(u);
     return `
       <div class="stat-card">
         <div class="stat-name">${u.toUpperCase()}</div>
