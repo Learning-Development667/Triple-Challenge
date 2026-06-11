@@ -4,7 +4,7 @@
 // ============================================================
 
 // App version — bump the patch number on every change merged to main.
-const APP_VERSION = 'v1.0.11';
+const APP_VERSION = 'v1.0.12';
 
 const EFFORTS = [
   { key: 'easy',    label: 'Easy' },
@@ -917,6 +917,7 @@ function renderSettings() {
               </label>
             </div>
             <div class="setting-hint" id="notifHint">${notifEnabled ? 'On — daily reminder at 07:00' : 'Enable to get a daily 07:00 reminder'}</div>
+            <div class="setting-hint" id="notifDiag" style="font-size:9px;opacity:0.55;word-break:break-word;margin-top:6px;line-height:1.5">diagnostic…</div>
           </div>
         </div>
         <div class="settings-section">
@@ -949,8 +950,12 @@ function renderSettings() {
     </div>
   `);
 
-  // Reflect the real OneSignal subscription state in the toggle.
+  // Reflect the real OneSignal subscription state in the toggle, and keep the
+  // diagnostic line fresh as the SDK finishes initialising.
   syncNotifToggle();
+  refreshNotifDiag();
+  setTimeout(refreshNotifDiag, 800);
+  setTimeout(refreshNotifDiag, 2500);
 }
 
 // ============================================================
@@ -1126,20 +1131,64 @@ function oneSignalReady() {
   return !!(window.OneSignal && window.OneSignal.Notifications && window.OneSignal.User);
 }
 
+// Is the app running as an installed PWA (iOS web push only works here)?
+function isInstalledPWA() {
+  return window.navigator.standalone === true ||
+    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+}
+
+// TEMP DIAGNOSTIC: a one-line summary of the OneSignal state, shown under the
+// toggle in Settings so issues are visible on-device without a console.
+function notifDiagText() {
+  const os = window.OneSignal;
+  const parts = [];
+  parts.push('mode: ' + (isInstalledPWA() ? 'installed PWA' : 'browser tab'));
+  parts.push('SDK: ' + (os ? 'loaded' : 'not loaded'));
+  parts.push('init: ' + (window.__osInit || 'pending'));
+  if (os && os.Notifications) {
+    let sup = '?';
+    try { sup = String(os.Notifications.isPushSupported()); } catch (e) { sup = 'err:' + e.message; }
+    parts.push('pushSupported: ' + sup);
+    parts.push('perm: ' + os.Notifications.permission);
+  }
+  if (os && os.User && os.User.PushSubscription) {
+    parts.push('optedIn: ' + os.User.PushSubscription.optedIn);
+  }
+  return parts.join(' · ');
+}
+
+function refreshNotifDiag() {
+  const el = document.getElementById('notifDiag');
+  if (el) el.textContent = notifDiagText();
+}
+
 async function toggleNotif() {
   const toggle = document.getElementById('notifToggle');
   const hint = document.getElementById('notifHint');
   if (!toggle) return;
+  refreshNotifDiag();
 
   // Call OneSignal directly (NOT via the deferred queue) so the permission
   // prompt stays inside the tap's user gesture — required on iOS, otherwise
   // the request is silently ignored and the toggle appears to do nothing.
   if (!oneSignalReady()) {
     toggle.checked = false;
-    if (hint) hint.textContent = 'Notifications are still loading — try again in a moment.';
+    if (hint) hint.textContent = 'Notifications not ready (' + (window.__osInit || 'loading') + '). On iPhone, open the app from your Home Screen.';
     return;
   }
   const OneSignal = window.OneSignal;
+
+  // iOS only supports web push inside an installed PWA — never in Safari tabs.
+  let pushSupported = true;
+  try { pushSupported = OneSignal.Notifications.isPushSupported(); } catch (e) {}
+  if (!pushSupported) {
+    toggle.checked = false;
+    if (hint) hint.textContent = isInstalledPWA()
+      ? "Push isn't supported on this device/OS version."
+      : "Push only works in the installed app. On iPhone: Share → Add to Home Screen, then open it from there.";
+    refreshNotifDiag();
+    return;
+  }
 
   if (toggle.checked) {
     try {
@@ -1157,7 +1206,7 @@ async function toggleNotif() {
       }
     } catch (e) {
       toggle.checked = false;
-      if (hint) hint.textContent = 'Could not enable notifications: ' + ((e && e.message) || 'unknown error');
+      if (hint) hint.textContent = 'Error: ' + ((e && e.message) || 'unknown error');
     }
   } else {
     notifEnabled = false;
@@ -1165,6 +1214,7 @@ async function toggleNotif() {
     if (hint) hint.textContent = 'Off';
     try { await OneSignal.User.PushSubscription.optOut(); } catch (e) {}
   }
+  refreshNotifDiag();
 }
 
 // Reflect the real OneSignal subscription state in the settings toggle/hint.
@@ -1172,6 +1222,7 @@ async function toggleNotif() {
 function syncNotifToggle() {
   const toggle = document.getElementById('notifToggle');
   if (!toggle) return;
+  refreshNotifDiag();
   withOneSignal((OneSignal) => {
     const hint = document.getElementById('notifHint');
     const sub = OneSignal.User && OneSignal.User.PushSubscription;
@@ -1180,5 +1231,6 @@ function syncNotifToggle() {
     notifEnabled = optedIn;
     localStorage.setItem('notifEnabled', optedIn ? 'true' : 'false');
     if (hint) hint.textContent = optedIn ? 'On — daily reminder at 07:00' : 'Enable to get a daily 07:00 reminder';
+    refreshNotifDiag();
   });
 }
