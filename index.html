@@ -26,7 +26,7 @@
     /* ── TOKENS ───────────────────────────────────────────── */
     :root {
       --bg:       #13294B;
-      --surface:  #1C3A66;
+      --surface:  rgba(28,58,102,0.6);
       --surface2: #234574;
       --border:   rgba(0,163,255,0.2);
       --border2:  rgba(255,255,255,0.12);
@@ -133,7 +133,7 @@
       background-color: var(--bg);
       background-image:
         radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1.4px),
-        linear-gradient(rgba(19,41,75,0.75), rgba(19,41,75,0.75)),
+        linear-gradient(rgba(19,41,75,0.45), rgba(19,41,75,0.45)),
         var(--screen-bg);
       background-size: 22px 22px, cover, cover;
       background-position: -11px -11px, center, center;
@@ -729,12 +729,32 @@
     }
 
     .exercise-card.done { border-color: rgba(52,211,153,0.4); }
-    /* Rest day — muted, greyed out, and non-interactive. */
+    /* Rest day — intentional and elegant: very transparent, dashed border,
+       centred "REST DAY" with the exercise name greyed out above it. */
     .exercise-card.rest {
-      opacity: 0.4;
-      filter: grayscale(0.75);
+      background: rgba(28,58,102,0.3);
+      border: 1px dashed var(--border2);
+      text-align: center;
+      padding: 24px 20px;
       pointer-events: none;
       box-shadow: none;
+    }
+    .rest-ex-name {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.25em;
+      color: var(--grey);
+      text-transform: uppercase;
+      opacity: 0.5;
+      margin-bottom: 10px;
+    }
+    .rest-day-text {
+      font-family: var(--head);
+      font-size: 28px;
+      line-height: 1;
+      letter-spacing: 0.16em;
+      color: var(--grey);
+      text-transform: uppercase;
     }
 
     .ex-main {
