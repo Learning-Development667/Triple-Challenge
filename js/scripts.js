@@ -4,7 +4,7 @@
 // ============================================================
 
 // App version — bump the patch number on every change merged to main.
-const APP_VERSION = 'v1.0.14';
+const APP_VERSION = 'v1.0.15';
 
 const EFFORTS = [
   { key: 'easy',    label: 'Easy' },
@@ -917,6 +917,7 @@ function renderSettings() {
               </label>
             </div>
             <div class="setting-hint" id="notifHint">${notifEnabled ? 'On — daily reminder at 07:00' : 'Enable to get a daily 07:00 reminder'}</div>
+            <div class="setting-hint" id="notifDiag" style="font-size:9px;opacity:0.6;word-break:break-word;margin-top:6px;line-height:1.5;font-family:monospace">diagnostic…</div>
           </div>
         </div>
         <div class="settings-section">
@@ -949,8 +950,13 @@ function renderSettings() {
     </div>
   `);
 
-  // Reflect the real OneSignal subscription state in the toggle.
+  // Reflect the real OneSignal subscription state in the toggle, and keep the
+  // diagnostic fresh as the SDK load/init/probe resolves asynchronously.
   syncNotifToggle();
+  refreshNotifDiag();
+  setTimeout(refreshNotifDiag, 1000);
+  setTimeout(refreshNotifDiag, 3000);
+  setTimeout(refreshNotifDiag, 7000);
 }
 
 // ============================================================
@@ -1132,10 +1138,54 @@ function isInstalledPWA() {
     (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
 }
 
+// TEMP DIAGNOSTIC: full OneSignal state shown under the toggle so we can see
+// what actually fails on a given device (no console needed).
+function notifDiagText() {
+  const os = window.OneSignal;
+  const parts = [];
+  parts.push(APP_VERSION);
+  parts.push('mode:' + (isInstalledPWA() ? 'PWA' : 'tab'));
+  parts.push('SDK:' + (os ? 'loaded' : 'not-loaded'));
+  parts.push('init:' + (window.__osInit || 'pending'));
+  if (window.__osErr) parts.push('err:' + window.__osErr);
+  if (os && os.Notifications) {
+    try { parts.push('pushSupported:' + os.Notifications.isPushSupported()); } catch (e) { parts.push('pushSupported:err'); }
+    parts.push('perm:' + os.Notifications.permission);
+  }
+  if (os && os.User && os.User.PushSubscription) parts.push('optedIn:' + os.User.PushSubscription.optedIn);
+  try {
+    const c = navigator.serviceWorker && navigator.serviceWorker.controller;
+    parts.push('swCtrl:' + (c ? new URL(c.scriptURL).pathname : 'none'));
+  } catch (e) {}
+  return parts.join(' · ');
+}
+
+function refreshNotifDiag() {
+  const el = document.getElementById('notifDiag');
+  if (!el) return;
+  el.textContent = notifDiagText();
+  // Append the list of registered service workers (async) — reveals whether
+  // the OneSignal worker registered and whether an old sw.js is interfering.
+  if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+    navigator.serviceWorker.getRegistrations().then((regs) => {
+      const el2 = document.getElementById('notifDiag');
+      if (!el2) return;
+      const sws = regs.map((r) => {
+        const sw = r.active || r.waiting || r.installing;
+        let p = '?';
+        try { p = sw ? new URL(sw.scriptURL).pathname.replace('/Triple-Challenge/', '') : '?'; } catch (e) {}
+        return p;
+      });
+      el2.textContent = notifDiagText() + ' · SWs:[' + sws.join(',') + ']';
+    }).catch(() => {});
+  }
+}
+
 async function toggleNotif() {
   const toggle = document.getElementById('notifToggle');
   const hint = document.getElementById('notifHint');
   if (!toggle) return;
+  refreshNotifDiag();
 
   // Call OneSignal directly (NOT via the deferred queue) so the permission
   // prompt stays inside the tap's user gesture — required on iOS, otherwise
@@ -1188,6 +1238,7 @@ async function toggleNotif() {
     if (hint) hint.textContent = 'Off';
     try { await OneSignal.User.PushSubscription.optOut(); } catch (e) {}
   }
+  refreshNotifDiag();
 }
 
 // Reflect the real OneSignal subscription state in the settings toggle/hint.
@@ -1195,6 +1246,7 @@ async function toggleNotif() {
 function syncNotifToggle() {
   const toggle = document.getElementById('notifToggle');
   if (!toggle) return;
+  refreshNotifDiag();
   withOneSignal((OneSignal) => {
     const hint = document.getElementById('notifHint');
     const sub = OneSignal.User && OneSignal.User.PushSubscription;
