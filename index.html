@@ -999,14 +999,14 @@
     @keyframes prog-spin-green { to { --angGreen: 360deg; } }
     @keyframes prog-spin-red   { to { --angRed: 360deg; } }
 
-    .prog-day-card.prog-complete::before,
-    .prog-day-card.prog-incomplete::before,
+    .prog-day-card.prog-complete::before,    .prog-week-card.prog-complete::before,
+    .prog-day-card.prog-incomplete::before,  .prog-week-card.prog-incomplete::before,
     .prog-day-card.prog-today::before {
       content: '';
       position: absolute;
       inset: 0;
       border-radius: inherit;
-      padding: 1.5px;
+      padding: 2.5px;
       -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
       -webkit-mask-composite: xor;
               mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -1014,14 +1014,21 @@
       pointer-events: none;
       z-index: 2;
     }
-    .prog-day-card.prog-complete::before {
+    /* Brighter, wider, glowing green/red arcs (today's blue arc unchanged). */
+    .prog-day-card.prog-complete::before,
+    .prog-week-card.prog-complete::before {
       background: conic-gradient(from var(--angGreen),
-        rgba(0,0,0,0) 0deg, rgba(0,0,0,0) 18deg, #27ae60 42deg, rgba(0,0,0,0) 66deg, rgba(0,0,0,0) 360deg);
+        rgba(0,0,0,0) 0deg, rgba(0,0,0,0) 6deg,
+        #2ee86b 28deg, #2ee86b 72deg,
+        rgba(0,0,0,0) 94deg, rgba(0,0,0,0) 360deg);
       animation: prog-spin-green 3.2s linear infinite;
     }
-    .prog-day-card.prog-incomplete::before {
+    .prog-day-card.prog-incomplete::before,
+    .prog-week-card.prog-incomplete::before {
       background: conic-gradient(from var(--angRed),
-        rgba(0,0,0,0) 0deg, rgba(0,0,0,0) 18deg, #e53935 42deg, rgba(0,0,0,0) 66deg, rgba(0,0,0,0) 360deg);
+        rgba(0,0,0,0) 0deg, rgba(0,0,0,0) 6deg,
+        #ff4d4d 28deg, #ff4d4d 72deg,
+        rgba(0,0,0,0) 94deg, rgba(0,0,0,0) 360deg);
       animation: prog-spin-red 3.2s linear infinite;
     }
     .prog-day-card.prog-today::before {
@@ -1029,6 +1036,11 @@
         rgba(0,0,0,0) 0deg, rgba(0,0,0,0) 18deg, #00A3FF 42deg, rgba(0,0,0,0) 66deg, rgba(0,0,0,0) 360deg);
       animation: user-card-arc 3.2s linear infinite;
     }
+    /* Status glow around the whole card (not clipped by overflow). */
+    .prog-day-card.prog-complete,
+    .prog-week-card.prog-complete   { box-shadow: 0 0 16px rgba(46,232,107,0.4), var(--shadow); }
+    .prog-day-card.prog-incomplete,
+    .prog-week-card.prog-incomplete { box-shadow: 0 0 16px rgba(255,77,77,0.4), var(--shadow); }
 
     .prog-day-card.prog-today {
       border-color: rgba(0,163,255,0.6);
@@ -1053,6 +1065,50 @@
       border-bottom-color: rgba(255,92,108,0.3);
     }
     .prog-day-card.prog-incomplete .prog-day-num { color: var(--danger); }
+
+    /* ── WEEK ROWS (collapsed past weeks) ─────────────────── */
+    .prog-week-card {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .prog-week-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 13px 16px;
+      cursor: pointer;
+    }
+    .prog-week-label {
+      font-family: var(--head);
+      font-size: 22px;
+      letter-spacing: 1.5px;
+      color: var(--white);
+    }
+    .prog-week-status {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--grey);
+      white-space: nowrap;
+    }
+    .prog-week-chevron {
+      display: inline-flex;
+      color: var(--grey);
+      transition: transform 0.2s ease;
+    }
+    .prog-week-card.prog-week-collapsed .prog-week-chevron { transform: rotate(-90deg); }
+    .prog-week-card.prog-week-collapsed .prog-week-days { display: none; }
+    .prog-week-days { padding: 6px 10px 4px; }
+
+    .prog-week-card.prog-complete .prog-week-header { background: var(--green-dim); }
+    .prog-week-card.prog-complete .prog-week-label  { color: var(--green-b); }
+    .prog-week-card.prog-incomplete .prog-week-header { background: var(--danger-dim); }
+    .prog-week-card.prog-incomplete .prog-week-label  { color: var(--danger); }
 
     .prog-day-meta {
       display: flex;
