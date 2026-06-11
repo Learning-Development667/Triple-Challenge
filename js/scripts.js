@@ -4,7 +4,7 @@
 // ============================================================
 
 // App version — bump the patch number on every change merged to main.
-const APP_VERSION = 'v1.2.0';
+const APP_VERSION = 'v1.3.0';
 
 const EFFORTS = [
   { key: 'easy',    label: 'Easy' },
@@ -152,15 +152,36 @@ function showLoading() {
 // ---- SECTION BUILDERS (shared by full render and in-place updates) ----
 
 function buildProgressRing(doneCount, totalCount, allDone) {
+  // Visual only: segmented ring — electric blue for completed segments, red for
+  // incomplete; when all segments are done the whole ring turns gold (+ glow).
+  const C = 113.097; // circumference for r=18 (2 * PI * 18)
+  const complete = doneCount >= totalCount;
+  const BLUE = '#00A3FF', RED = '#FF5C6C', GOLD = '#F5A623';
+
+  let ring;
+  if (complete) {
+    ring = `<circle cx="22" cy="22" r="18" fill="none" stroke="${GOLD}" stroke-width="4" stroke-linecap="round"/>`;
+  } else {
+    const gap = 9;
+    const seg = (C / totalCount) - gap;
+    ring = '';
+    for (let i = 0; i < totalCount; i++) {
+      const color = i < doneCount ? BLUE : RED;
+      const offset = -((i * (C / totalCount)) + (gap / 2));
+      ring += `<circle cx="22" cy="22" r="18" fill="none" stroke="${color}" stroke-width="4"
+              stroke-linecap="round" transform="rotate(-90 22 22)"
+              stroke-dasharray="${seg.toFixed(2)} ${(C - seg).toFixed(2)}"
+              stroke-dashoffset="${offset.toFixed(2)}"/>`;
+    }
+  }
+
   return `
-        <div class="day-progress-ring" id="today-ring">
+        <div class="day-progress-ring${complete ? ' ring-complete' : ''}" id="today-ring">
           <svg viewBox="0 0 44 44">
-            <circle cx="22" cy="22" r="18" fill="none" stroke="#2a2a2a" stroke-width="4"/>
-            <circle cx="22" cy="22" r="18" fill="none" stroke="${allDone ? '#27ae60' : '#c0392b'}" stroke-width="4"
-              stroke-dasharray="${Math.round((doneCount / totalCount) * 113)} 113"
-              stroke-linecap="round" transform="rotate(-90 22 22)"/>
+            <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/>
+            ${ring}
           </svg>
-          <span class="ring-text">${doneCount}/${totalCount}</span>
+          <span class="ring-text" style="color:${complete ? GOLD : '#FFFFFF'}">${doneCount}/${totalCount}</span>
         </div>`;
 }
 
