@@ -4,7 +4,7 @@
 // ============================================================
 
 // App version — bump the patch number on every change merged to main.
-const APP_VERSION = 'v1.0.16';
+const APP_VERSION = 'v1.1.0';
 
 const EFFORTS = [
   { key: 'easy',    label: 'Easy' },
