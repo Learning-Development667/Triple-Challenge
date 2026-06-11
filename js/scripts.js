@@ -4,7 +4,7 @@
 // ============================================================
 
 // App version — bump the patch number on every change merged to main.
-const APP_VERSION = 'v1.7.0';
+const APP_VERSION = 'v1.7.1';
 
 const EFFORTS = [
   { key: 'easy',    label: 'Easy' },
@@ -137,45 +137,40 @@ function currentDayIndex() {
   return Math.floor((today - start) / 86400000);
 }
 
-// Has `user` fully completed a day (all non-rest exercises logged)?
-function dayCompletedBy(user, month, day) {
-  const dd = getDayData(month, day);
-  if (!dd) return false;
+// Did `user` train on challenge-day index `gi` (logged at least one exercise)?
+// Streak and last-active both use this single signal so they stay consistent.
+function dayActive(user, gi) {
+  const month = Math.floor(gi / 30) + 1, day = (gi % 30) + 1;
   const log = (appData[user] && appData[user].logs[`m${month}d${day}`]) || {};
-  return ['plank', 'pushups', 'situps'].filter(k => dd[k] !== null).every(k => log[k] !== undefined);
+  return ['plank', 'pushups', 'situps'].some(k => log[k] !== undefined);
 }
 
-// Current streak: consecutive completed days ending at today (today not yet
-// done doesn't break the run).
+// Current streak: consecutive trained days ending at today. Today not logged
+// yet is allowed (the streak then runs up to yesterday); a fully missed day
+// breaks it.
 function getUserStreak(user) {
-  const last = Math.min(currentDayIndex(), 89);
-  if (last < 0) return 0;
+  const todayIdx = currentDayIndex();
+  if (todayIdx < 0) return 0;
+  let gi = Math.min(todayIdx, 89);
+  if (!dayActive(user, gi)) gi--; // grace: today may not be logged yet
   let streak = 0;
-  for (let gi = last; gi >= 0; gi--) {
-    const month = Math.floor(gi / 30) + 1, day = (gi % 30) + 1;
-    if (dayCompletedBy(user, month, day)) streak++;
-    else if (gi === last) continue;
-    else break;
-  }
+  while (gi >= 0 && dayActive(user, gi)) { streak++; gi--; }
   return streak;
 }
 
-// Most recent real activity (max ts across all logs) -> "today"/"N days ago".
+// Most recent day the user trained -> "today" / "yesterday" / "N days ago".
 function getLastActive(user) {
+  const todayIdx = currentDayIndex();
   const logs = (appData[user] && appData[user].logs) || {};
-  let maxTs = 0;
+  let latest = -1;
   for (const key in logs) {
-    const entry = logs[key];
-    if (!entry) continue;
-    for (const k in entry) {
-      const v = entry[k];
-      if (v && typeof v === 'object' && v.ts) maxTs = Math.max(maxTs, v.ts);
-    }
+    const m = key.match(/^m(\d+)d(\d+)$/);
+    if (!m) continue;
+    const gi = (parseInt(m[1], 10) - 1) * 30 + (parseInt(m[2], 10) - 1);
+    if (gi > latest && dayActive(user, gi)) latest = gi;
   }
-  if (!maxTs) return null;
-  const d = new Date(maxTs); d.setHours(0, 0, 0, 0);
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const days = Math.round((today - d) / 86400000);
+  if (latest < 0) return null;
+  const days = todayIdx - latest;
   if (days <= 0) return 'today';
   if (days === 1) return 'yesterday';
   return `${days} days ago`;
