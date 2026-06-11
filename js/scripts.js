@@ -4,7 +4,7 @@
 // ============================================================
 
 // App version — bump the patch number on every change merged to main.
-const APP_VERSION = 'v1.10.1';
+const APP_VERSION = 'v1.10.2';
 
 const EFFORTS = [
   { key: 'easy',    label: 'Easy' },
@@ -68,9 +68,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ============================================================
 //  SWIPE NAVIGATION
 // ============================================================
-// Left/right swipe shortcuts inside the app (never on the home screen):
+// Left/right swipe shortcuts inside the app (never on the home/daily screen):
 //   • Progress  — swipe to move between the Month 1/2/3 tabs
-//   • Daily     — swipe left to return to the home screen
 //   • Settings  — swipe right to return to the daily screen
 // Uses touchstart/touchend with a 50px minimum horizontal distance, and only
 // fires when the gesture is more horizontal than vertical so it never fights
@@ -102,9 +101,8 @@ function handleSwipe(dx, dy) {
     if (active === undefined) active = 0;
     const next = swipeLeft ? Math.min(active + 1, 2) : Math.max(active - 1, 0);
     if (next !== active) switchProgTab(next);
-  } else if (document.querySelector('.screen-daily')) {
-    if (swipeLeft) renderUserSelect();
   } else if (document.querySelector('.screen-settings')) {
+    // Daily screen has no swipe gesture — the back button is the only way home.
     if (!swipeLeft) renderToday();
   }
 }

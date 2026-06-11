@@ -201,6 +201,7 @@
     /* Rotating electric-blue arc: a conic-gradient masked to a thin edge strip
        so only the arc segment shows — a subtle futuristic scanning border. */
     .user-card::before,
+    .check-updates::before,
     .day-header::before,
     .routine-section::before,
     .partner-strip::before {
@@ -355,19 +356,26 @@
       padding-top: 0;
     }
 
+    /* Prominent pill button with the same rotating electric-blue arc laser
+       border as the user cards (the ::before rule below adds the arc). */
     .check-updates {
-      background: none;
-      border: none;
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.1em;
+      position: relative;
+      overflow: hidden;
+      margin-top: 4px;
+      background: var(--surface);
+      border: 1px solid rgba(0,163,255,0.6);
+      border-radius: 999px;
+      font-family: var(--head);
+      font-size: 15px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
       color: var(--accent);
-      opacity: 0.85;
-      padding: 2px 6px;
+      padding: 13px 30px;
       cursor: pointer;
-      transition: opacity 0.15s;
+      transition: transform 0.15s;
+      animation: user-card-breathe 3.6s ease-in-out infinite;
     }
-    .check-updates:active { opacity: 1; }
+    .check-updates:active { transform: scale(0.97); }
 
     /* ── MAIN SCREEN ──────────────────────────────────────── */
     .main-screen {
