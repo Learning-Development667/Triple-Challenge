@@ -4,7 +4,7 @@
 // ============================================================
 
 // App version — bump the patch number on every change merged to main.
-const APP_VERSION = 'v1.4.0';
+const APP_VERSION = 'v1.5.0';
 
 const EFFORTS = [
   { key: 'easy',    label: 'Easy' },
@@ -763,61 +763,60 @@ function renderProgress() {
     <button class="prog-tab ${i === 0 ? 'active' : ''}" onclick="switchProgTab(${i})" id="ptab${i}">${monthLabels[i]}</button>
   `).join('');
 
-  const tables = months.map((mk, mi) => {
-    const days = CHALLENGE_DATA[mk].days;
-    const rows = days.map(d => {
-      const logKey = `m${mi + 1}d${d.day}`;
-      const markLog = appData.mark.logs[logKey] || {};
-      const shelleyLog = appData.shelley.logs[logKey] || {};
+  const start = new Date(CHALLENGE_START); start.setHours(0, 0, 0, 0);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
 
-      const totalDay = mi * 30 + d.day - 1;
-      const start = new Date(CHALLENGE_START);
-      start.setHours(0,0,0,0);
-      const today = new Date(); today.setHours(0,0,0,0);
-      const dayDate = new Date(start.getTime() + totalDay * 86400000);
-      const isPast = dayDate < today;
-      const isToday = dayDate.getTime() === today.getTime();
+  // Build one day card + the metadata the week grouping needs.
+  function buildProgDay(d, mi) {
+    const logKey = `m${mi + 1}d${d.day}`;
+    const markLog = appData.mark.logs[logKey] || {};
+    const shelleyLog = appData.shelley.logs[logKey] || {};
 
-      // Past days collapse by default, colour-coded on the viewing user's completion
-      const isCollapsible = isPast && !isToday;
-      const viewerLog = appData[currentUser].logs[logKey] || {};
-      const dayComplete = ['plank', 'pushups', 'situps']
-        .filter(k => d[k] !== null)
-        .every(k => viewerLog[k] !== undefined);
+    const totalDay = mi * 30 + d.day - 1;
+    const dayDate = new Date(start.getTime() + totalDay * 86400000);
+    const isPast = dayDate < today;
+    const isToday = dayDate.getTime() === today.getTime();
 
-      const exRow = (ex, target, mLog, sLog) => {
-        if (target === null) {
-          return `
+    // Past days collapse by default, colour-coded on the viewing user's completion
+    const isCollapsible = isPast && !isToday;
+    const viewerLog = appData[currentUser].logs[logKey] || {};
+    const dayComplete = ['plank', 'pushups', 'situps']
+      .filter(k => d[k] !== null)
+      .every(k => viewerLog[k] !== undefined);
+
+    const exRow = (ex, target, mLog, sLog) => {
+      if (target === null) {
+        return `
             <div class="prog-ex-row rest">
               <span class="prog-ex-name">${ex}</span>
               <span class="prog-rest-label">Rest Day</span>
               <span class="prog-rest-label">Rest Day</span>
             </div>`;
-        }
-        const mDone = mLog !== undefined;
-        const sDone = sLog !== undefined;
-        const mCell = mDone
-          ? `<span class="prog-done-cell">${getSVGIcon('tick', 13)} ${getSVGIcon(mLog.effort, 13)}</span>`
-          : `<span class="prog-empty-cell">${isPast || isToday ? '—' : ''}</span>`;
-        const sCell = sDone
-          ? `<span class="prog-done-cell">${getSVGIcon('tick', 13)} ${getSVGIcon(sLog.effort, 13)}</span>`
-          : `<span class="prog-empty-cell">${isPast || isToday ? '—' : ''}</span>`;
-        return `
+      }
+      const mDone = mLog !== undefined;
+      const sDone = sLog !== undefined;
+      const mCell = mDone
+        ? `<span class="prog-done-cell">${getSVGIcon('tick', 13)} ${getSVGIcon(mLog.effort, 13)}</span>`
+        : `<span class="prog-empty-cell">${isPast || isToday ? '—' : ''}</span>`;
+      const sCell = sDone
+        ? `<span class="prog-done-cell">${getSVGIcon('tick', 13)} ${getSVGIcon(sLog.effort, 13)}</span>`
+        : `<span class="prog-empty-cell">${isPast || isToday ? '—' : ''}</span>`;
+      return `
           <div class="prog-ex-row">
             <span class="prog-ex-name">${ex} <span class="prog-target">${target}</span></span>
             ${mCell}
             ${sCell}
           </div>`;
-      };
+    };
 
-      const cardClass = [
-        'prog-day-card',
-        isToday ? 'prog-today' : '',
-        isCollapsible ? 'prog-collapsible prog-collapsed' : '',
-        isCollapsible ? (dayComplete ? 'prog-complete' : 'prog-incomplete') : '',
-      ].filter(Boolean).join(' ');
+    const cardClass = [
+      'prog-day-card',
+      isToday ? 'prog-today' : '',
+      isCollapsible ? 'prog-collapsible prog-collapsed' : '',
+      isCollapsible ? (dayComplete ? 'prog-complete' : 'prog-incomplete') : '',
+    ].filter(Boolean).join(' ');
 
-      return `
+    const html = `
         <div class="${cardClass}">
           <div class="prog-day-header" ${isCollapsible ? 'onclick="toggleProgDay(this)"' : ''}>
             <span class="prog-day-num">${isToday ? '→ ' : ''}Day ${d.day}</span>
@@ -835,7 +834,41 @@ function renderProgress() {
             ${exRow('Sit-ups', d.situps !== null ? d.situps + ' reps' : null, markLog.situps, shelleyLog.situps)}
           </div>
         </div>`;
-    }).join('');
+
+    return { html, isPast, isToday, dayComplete };
+  }
+
+  const tables = months.map((mk, mi) => {
+    const days = CHALLENGE_DATA[mk].days;
+    const infos = days.map(d => buildProgDay(d, mi));
+
+    // Group days into weeks of 7. A full week that is entirely in the past
+    // collapses into a single "Week N" row; the current/future week and any
+    // trailing partial week show their day rows individually.
+    let rows = '';
+    for (let i = 0; i < infos.length; i += 7) {
+      const group = infos.slice(i, i + 7);
+      const fullWeek = group.length === 7;
+      const allPast = group.every(g => g.isPast && !g.isToday);
+      if (fullWeek && allPast) {
+        const weekNum = (mi * 4) + (i / 7) + 1;
+        const complete = group.every(g => g.dayComplete);
+        const daysHtml = group.map(g => g.html).join('');
+        rows += `
+        <div class="prog-week-card prog-week-collapsed ${complete ? 'prog-complete' : 'prog-incomplete'}">
+          <div class="prog-week-header" onclick="toggleProgWeek(this)">
+            <span class="prog-week-label">Week ${weekNum}</span>
+            <div class="prog-day-meta">
+              <span class="prog-week-status">${complete ? 'All 7 complete' : 'Day(s) missed'}</span>
+              <span class="prog-week-chevron">${getSVGIcon('chevron')}</span>
+            </div>
+          </div>
+          <div class="prog-week-days" style="display:none">${daysHtml}</div>
+        </div>`;
+      } else {
+        rows += group.map(g => g.html).join('');
+      }
+    }
 
     return `
       <div class="prog-table-wrap" id="ptable${mi}" style="${mi === 0 ? '' : 'display:none'}">
@@ -909,6 +942,15 @@ function toggleProgDay(headerEl) {
   // stylesheet (which can be served stale from cache).
   const rows = card.querySelector('.prog-ex-rows');
   if (rows) rows.style.display = collapsed ? 'none' : '';
+}
+
+// Expand / collapse a past-week row on the progress screen.
+function toggleProgWeek(headerEl) {
+  const card = headerEl.closest('.prog-week-card');
+  if (!card) return;
+  const collapsed = card.classList.toggle('prog-week-collapsed');
+  const days = card.querySelector('.prog-week-days');
+  if (days) days.style.display = collapsed ? 'none' : '';
 }
 
 // ============================================================
