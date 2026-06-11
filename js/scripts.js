@@ -4,7 +4,7 @@
 // ============================================================
 
 // App version — bump the patch number on every change merged to main.
-const APP_VERSION = 'v1.3.0';
+const APP_VERSION = 'v1.4.0';
 
 const EFFORTS = [
   { key: 'easy',    label: 'Easy' },
@@ -45,7 +45,8 @@ function getSVGIcon(name, size = 28) {
     cooldown: `<svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 6 L16 26 M8 10 L16 6 L24 10 M8 22 L16 26 L24 22 M6 16 L26 16 M6 16 L10 12 M6 16 L10 20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`,
     dumbbell: `<svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="11" y1="16" x2="21" y2="16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect x="4" y="11" width="4" height="10" rx="1.5" fill="currentColor"/><rect x="24" y="11" width="4" height="10" rx="1.5" fill="currentColor"/><rect x="9" y="13" width="2.5" height="6" rx="1" fill="currentColor"/><rect x="20.5" y="13" width="2.5" height="6" rx="1" fill="currentColor"/></svg>`,
     formguide: `<svg width="16" height="16" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="12" stroke="currentColor" stroke-width="2"/><line x1="16" y1="14" x2="16" y2="22" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><circle cx="16" cy="10" r="1.5" fill="currentColor"/></svg>`,
-    chevron: `<svg width="14" height="14" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><polyline points="8,12 16,20 24,12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+    chevron: `<svg width="14" height="14" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><polyline points="8,12 16,20 24,12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    back: `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><polyline points="19,7 11,16 19,25" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`
   };
   return icons[name] || '';
 }
@@ -446,7 +447,7 @@ function renderToday() {
     <div class="main-screen">
       <header class="app-header">
         <div class="header-left">
-          <button class="back-btn" onclick="renderUserSelect()">&#9664;</button>
+          <button class="back-btn" onclick="renderUserSelect()">${getSVGIcon('back', 18)}</button>
           <div class="header-title">
             <span class="header-user">${currentUser.toUpperCase()}</span>
             <span class="header-sub">TRIPLE CHALLENGE</span>
@@ -847,7 +848,7 @@ function renderProgress() {
     <div class="main-screen">
       <header class="app-header">
         <div class="header-left">
-          <button class="back-btn" onclick="renderToday()">&#9664;</button>
+          <button class="back-btn" onclick="renderToday()">${getSVGIcon('back', 18)}</button>
           <div class="header-title">
             <span class="header-user">PROGRESS</span>
             <span class="header-sub">${currentUser.toUpperCase()}</span>
@@ -919,7 +920,7 @@ function renderSettings() {
     <div class="main-screen">
       <header class="app-header">
         <div class="header-left">
-          <button class="back-btn" onclick="renderToday()">&#9664;</button>
+          <button class="back-btn" onclick="renderToday()">${getSVGIcon('back', 18)}</button>
           <div class="header-title">
             <span class="header-user">SETTINGS</span>
             <span class="header-sub">TRIPLE CHALLENGE</span>
@@ -1007,7 +1008,7 @@ function renderBackfill() {
     <div class="main-screen">
       <header class="app-header">
         <div class="header-left">
-          <button class="back-btn" onclick="renderSettings()">&#9664;</button>
+          <button class="back-btn" onclick="renderSettings()">${getSVGIcon('back', 18)}</button>
           <div class="header-title">
             <span class="header-user">BACKFILL</span>
             <span class="header-sub">SELECT A DAY</span>
@@ -1073,7 +1074,7 @@ function renderBackfillDay(month, day) {
     <div class="main-screen">
       <header class="app-header">
         <div class="header-left">
-          <button class="back-btn" onclick="renderBackfill()">&#9664;</button>
+          <button class="back-btn" onclick="renderBackfill()">${getSVGIcon('back', 18)}</button>
           <div class="header-title">
             <span class="header-user">DAY ${day}</span>
             <span class="header-sub">MONTH ${month} — BACKFILL</span>
