@@ -1320,18 +1320,25 @@
   <script src="./config.js"></script>
 
   <!-- OneSignal Web SDK v16 (push notifications) -->
-  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer
+          onerror="window.__osInit = 'SDK script failed to load'"></script>
   <script>
+    window.__osInit = 'pending';
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     OneSignalDeferred.push(async function (OneSignal) {
-      await OneSignal.init({
-        appId: ONESIGNAL_APP_ID,
-        // The app is served from the /Triple-Challenge/ project subpath and
-        // already has a network-first sw.js at that scope. Register the
-        // OneSignal worker under its own sub-scope so the two don't clash.
-        serviceWorkerPath: 'OneSignalSDKWorker.js',
-        serviceWorkerParam: { scope: '/Triple-Challenge/onesignal/' },
-      });
+      try {
+        await OneSignal.init({
+          appId: ONESIGNAL_APP_ID,
+          // The app is served from the /Triple-Challenge/ project subpath and
+          // already has a network-first sw.js at that scope. Register the
+          // OneSignal worker under its own sub-scope so the two don't clash.
+          serviceWorkerPath: 'OneSignalSDKWorker.js',
+          serviceWorkerParam: { scope: '/Triple-Challenge/onesignal/' },
+        });
+        window.__osInit = 'ok';
+      } catch (e) {
+        window.__osInit = 'init error: ' + ((e && e.message) || e);
+      }
     });
   </script>
 
