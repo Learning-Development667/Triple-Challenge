@@ -4,7 +4,7 @@
 // ============================================================
 
 // App version — bump the patch number on every change merged to main.
-const APP_VERSION = 'v1.0.13';
+const APP_VERSION = 'v1.0.14';
 
 const EFFORTS = [
   { key: 'easy',    label: 'Easy' },
@@ -1142,7 +1142,13 @@ async function toggleNotif() {
   // the request is silently ignored and the toggle appears to do nothing.
   if (!oneSignalReady()) {
     toggle.checked = false;
-    if (hint) hint.textContent = 'Notifications not ready (' + (window.__osInit || 'loading') + '). On iPhone, open the app from your Home Screen.';
+    const status = window.__osInit || 'loading';
+    // While still loading/retrying, ask the user to wait; once it's a real
+    // failure, show the actionable message captured during SDK load/init.
+    const stillLoading = status === 'pending' || status === 'loading' || status.indexOf('retry') !== -1;
+    if (hint) hint.textContent = stillLoading
+      ? 'Notifications are still loading — try again in a moment.'
+      : status;
     return;
   }
   const OneSignal = window.OneSignal;
