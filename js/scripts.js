@@ -4,7 +4,7 @@
 // ============================================================
 
 // App version — bump the patch number on every change merged to main.
-const APP_VERSION = 'v1.5.1';
+const APP_VERSION = 'v1.6.0';
 
 const EFFORTS = [
   { key: 'easy',    label: 'Easy' },
@@ -57,6 +57,9 @@ function getSVGIcon(name, size = 28) {
 
 document.addEventListener('DOMContentLoaded', async () => {
   registerSW();
+  // Load data once up front so the landing screen can show per-user stats.
+  showLoading();
+  await loadData();
   renderUserSelect();
 });
 
@@ -109,36 +112,133 @@ function setView(html) {
 
 // ---- USER SELECT ----
 
+// Short motivational quotes for the landing screen (no API call needed).
+const HOME_QUOTES = [
+  "The only bad workout is the one you didn't do.",
+  "Discipline is choosing between what you want now and what you want most.",
+  "You don't have to be extreme, just consistent.",
+  "Push yourself — no one else is going to do it for you.",
+  "Strength grows in the moments you think you can't go on but keep going.",
+  "The body achieves what the mind believes.",
+  "Little by little, a little becomes a lot.",
+  "Don't wish for it, work for it.",
+  "Your only limit is you.",
+  "Fall in love with taking care of yourself.",
+  "Earn it. One rep at a time.",
+  "Showing up is half the battle.",
+  "Sweat now, shine later.",
+  "Consistency beats intensity.",
+];
+
+// Today's 0-based day index from the calendar (<0 before start, can exceed 89).
+function currentDayIndex() {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const start = new Date(CHALLENGE_START); start.setHours(0, 0, 0, 0);
+  return Math.floor((today - start) / 86400000);
+}
+
+// Has `user` fully completed a day (all non-rest exercises logged)?
+function dayCompletedBy(user, month, day) {
+  const dd = getDayData(month, day);
+  if (!dd) return false;
+  const log = (appData[user] && appData[user].logs[`m${month}d${day}`]) || {};
+  return ['plank', 'pushups', 'situps'].filter(k => dd[k] !== null).every(k => log[k] !== undefined);
+}
+
+// Current streak: consecutive completed days ending at today (today not yet
+// done doesn't break the run).
+function getUserStreak(user) {
+  const last = Math.min(currentDayIndex(), 89);
+  if (last < 0) return 0;
+  let streak = 0;
+  for (let gi = last; gi >= 0; gi--) {
+    const month = Math.floor(gi / 30) + 1, day = (gi % 30) + 1;
+    if (dayCompletedBy(user, month, day)) streak++;
+    else if (gi === last) continue;
+    else break;
+  }
+  return streak;
+}
+
+// Most recent real activity (max ts across all logs) -> "today"/"N days ago".
+function getLastActive(user) {
+  const logs = (appData[user] && appData[user].logs) || {};
+  let maxTs = 0;
+  for (const key in logs) {
+    const entry = logs[key];
+    if (!entry) continue;
+    for (const k in entry) {
+      const v = entry[k];
+      if (v && typeof v === 'object' && v.ts) maxTs = Math.max(maxTs, v.ts);
+    }
+  }
+  if (!maxTs) return null;
+  const d = new Date(maxTs); d.setHours(0, 0, 0, 0);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const days = Math.round((today - d) / 86400000);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  return `${days} days ago`;
+}
+
 function renderUserSelect() {
+  const dIdx = currentDayIndex();
+  const currentDay = Math.min(Math.max(dIdx + 1, 1), 90);
+  const pct = Math.max(0, Math.min(100, Math.round(((dIdx + 1) / 90) * 100)));
+  const challengeComplete = (dIdx + 1) >= 90;
+
+  // Rotate the quote on each visit.
+  let qi = parseInt(localStorage.getItem('homeQuoteIdx') || '0', 10);
+  if (isNaN(qi) || qi < 0) qi = 0;
+  const quote = HOME_QUOTES[qi % HOME_QUOTES.length];
+  localStorage.setItem('homeQuoteIdx', String((qi + 1) % HOME_QUOTES.length));
+
+  const userCard = (user, name) => {
+    const streak = getUserStreak(user);
+    const lastActive = getLastActive(user);
+    return `
+        <button class="user-card photo-card" onclick="selectUser('${user}')">
+          <div class="photo-wrap">
+            <img src="./images/${user}.png" alt="${name}" class="user-photo">
+            <span class="day-badge-overlay">Day ${currentDay} of 90</span>
+          </div>
+          <div class="user-card-body">
+            <span class="user-name">${name.toUpperCase()}</span>
+            ${lastActive ? `<span class="user-last-active">Last active: ${lastActive}</span>` : ''}
+            <span class="user-streak">🔥 ${streak} day streak</span>
+            <div class="user-progress">
+              <div class="user-progress-bar">
+                <div class="user-progress-fill${challengeComplete ? ' complete' : ''}" style="width:${pct}%"></div>
+              </div>
+              <span class="user-progress-pct">${pct}%</span>
+            </div>
+          </div>
+        </button>`;
+  };
+
   setView(`
     <div class="user-select-screen">
       <div class="logo-block">
         <h1 class="app-title">TRIPLE<br>CHALLENGE</h1>
         <p class="app-sub">30 DAYS · 3 EXERCISES · 2 LEGENDS</p>
       </div>
+      <div class="home-quote">“${quote}”</div>
       <div class="user-cards">
-        <button class="user-card photo-card" onclick="selectUser('mark')">
-          <div class="photo-wrap">
-            <img src="./images/mark.png" alt="Mark" class="user-photo">
-          </div>
-          <span class="user-name">MARK</span>
-        </button>
-        <button class="user-card photo-card" onclick="selectUser('shelley')">
-          <div class="photo-wrap">
-            <img src="./images/shelley.png" alt="Shelley" class="user-photo">
-          </div>
-          <span class="user-name">SHELLEY</span>
-        </button>
+        ${userCard('mark', 'Mark')}
+        ${userCard('shelley', 'Shelley')}
       </div>
-      <div class="app-version">${APP_VERSION}</div>
+      <div class="home-footer">
+        <img src="./images/mark_one_log.png" alt="Mark One Apps" class="mark-one-logo">
+        <div class="app-version">&copy; 2026 Mark 1 Apps &middot; ${APP_VERSION}</div>
+      </div>
     </div>
   `);
 }
 
 async function selectUser(user) {
   currentUser = user;
-  showLoading();
-  await loadData();
+  // Data is already loaded on startup; only fetch if that somehow failed.
+  if (!appData) { showLoading(); await loadData(); }
   renderToday();
 }
 

@@ -213,6 +213,7 @@
     }
 
     .photo-wrap {
+      position: relative;
       width: 100%;
       aspect-ratio: 3/4;
       overflow: hidden;
@@ -227,12 +228,113 @@
       display: block;
     }
 
+    /* "Day X of 90" badge overlaid on the avatar */
+    .day-badge-overlay {
+      position: absolute;
+      left: 50%; bottom: 8px;
+      transform: translateX(-50%);
+      background: rgba(6,16,33,0.82);
+      border: 1px solid rgba(0,163,255,0.5);
+      color: var(--accent);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+      padding: 3px 9px;
+      border-radius: 20px;
+    }
+
+    .user-card-body {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+      padding: 12px 10px 14px;
+    }
+
     .user-name {
       font-family: var(--head);
       font-size: 24px;
       letter-spacing: 3px;
-      padding: 14px 0 16px;
       color: var(--white);
+      line-height: 1;
+    }
+
+    .user-last-active {
+      font-family: var(--body);
+      font-size: 10px;
+      color: var(--grey);
+    }
+
+    .user-streak {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.04em;
+      color: var(--gold);
+      white-space: nowrap;
+    }
+
+    .user-progress {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 2px;
+    }
+
+    .user-progress-bar {
+      flex: 1;
+      height: 4px;
+      background: rgba(255,255,255,0.12);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .user-progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 3px;
+      transition: width 0.5s ease;
+    }
+    .user-progress-fill.complete { background: var(--gold); }
+
+    .user-progress-pct {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--grey);
+      flex-shrink: 0;
+    }
+
+    /* Rotating landing-screen quote */
+    .home-quote {
+      max-width: 360px;
+      margin: 0 auto 26px;
+      font-family: var(--body);
+      font-style: italic;
+      font-size: 14px;
+      line-height: 1.5;
+      color: rgba(255,255,255,0.78);
+      text-align: center;
+    }
+
+    /* Bottom footer + Mark One Apps logo */
+    .home-footer {
+      margin-top: auto;
+      padding-top: 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .mark-one-logo {
+      width: 80px;
+      height: auto;
+      opacity: 0.35;
+    }
+    .home-footer .app-version {
+      margin-top: 0;
+      padding-top: 0;
     }
 
     /* ── MAIN SCREEN ──────────────────────────────────────── */
