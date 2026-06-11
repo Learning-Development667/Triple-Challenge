@@ -4,7 +4,7 @@
 // ============================================================
 
 // App version — bump the patch number on every change merged to main.
-const APP_VERSION = 'v1.9.0';
+const APP_VERSION = 'v1.10.0';
 
 const EFFORTS = [
   { key: 'easy',    label: 'Easy' },
@@ -58,11 +58,56 @@ function getSVGIcon(name, size = 28) {
 
 document.addEventListener('DOMContentLoaded', async () => {
   registerSW();
+  initSwipeNav();
   // Load data once up front so the landing screen can show per-user stats.
   showLoading();
   await loadData();
   renderUserSelect();
 });
+
+// ============================================================
+//  SWIPE NAVIGATION
+// ============================================================
+// Left/right swipe shortcuts inside the app (never on the home screen):
+//   • Progress  — swipe to move between the Month 1/2/3 tabs
+//   • Daily     — swipe left to return to the home screen
+//   • Settings  — swipe right to return to the daily screen
+// Uses touchstart/touchend with a 50px minimum horizontal distance, and only
+// fires when the gesture is more horizontal than vertical so it never fights
+// with normal vertical scrolling.
+function initSwipeNav() {
+  let startX = 0, startY = 0, tracking = false;
+  document.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) { tracking = false; return; }
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    tracking = true;
+  }, { passive: true });
+  document.addEventListener('touchend', (e) => {
+    if (!tracking) return;
+    tracking = false;
+    const t = e.changedTouches[0];
+    handleSwipe(t.clientX - startX, t.clientY - startY);
+  }, { passive: true });
+}
+
+function handleSwipe(dx, dy) {
+  const MIN = 50;
+  // Must be a deliberate, mostly-horizontal swipe.
+  if (Math.abs(dx) < MIN || Math.abs(dx) <= Math.abs(dy)) return;
+  const swipeLeft = dx < 0;
+
+  if (document.querySelector('.screen-progress')) {
+    let active = [0, 1, 2].find(i => document.getElementById(`ptab${i}`)?.classList.contains('active'));
+    if (active === undefined) active = 0;
+    const next = swipeLeft ? Math.min(active + 1, 2) : Math.max(active - 1, 0);
+    if (next !== active) switchProgTab(next);
+  } else if (document.querySelector('.screen-daily')) {
+    if (swipeLeft) renderUserSelect();
+  } else if (document.querySelector('.screen-settings')) {
+    if (!swipeLeft) renderToday();
+  }
+}
 
 function registerSW() {
   if ('serviceWorker' in navigator) {
@@ -1099,7 +1144,7 @@ function toggleProgWeek(headerEl) {
 
 function renderSettings() {
   setView(`
-    <div class="main-screen">
+    <div class="main-screen screen-settings">
       <header class="app-header">
         <div class="header-left">
           <button class="back-btn" onclick="renderToday()">${getSVGIcon('back', 18)}</button>
@@ -1162,21 +1207,28 @@ function renderSettings() {
 // ============================================================
 
 function renderBackfill(scrollMonth, scrollDay) {
-  // Only show past days (days 1-7 for now, i.e. before today)
+  // Only show past days (before today).
   const today = new Date(); today.setHours(0,0,0,0);
   const start = new Date(CHALLENGE_START); start.setHours(0,0,0,0);
   const diffToday = Math.floor((today - start) / 86400000);
 
-  let dayOptions = '';
-  for (let i = 0; i < Math.min(diffToday, 90); i++) {
+  // Build one day button + the metadata the week grouping needs.
+  function buildDay(i) {
     const month = Math.floor(i / 30) + 1;
     const day = (i % 30) + 1;
     const date = new Date(start.getTime() + i * 86400000);
     const dateStr = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
     const logKey = `m${month}d${day}`;
-    const mDone = Object.keys(appData.mark.logs[logKey] || {}).filter(k => !k.startsWith('_')).length;
-    const sDone = Object.keys(appData.shelley.logs[logKey] || {}).filter(k => !k.startsWith('_')).length;
-    dayOptions += `
+    const dayData = getDayData(month, day);
+    const mLog = appData.mark.logs[logKey] || {};
+    const sLog = appData.shelley.logs[logKey] || {};
+    const mDone = Object.keys(mLog).filter(k => !k.startsWith('_')).length;
+    const sDone = Object.keys(sLog).filter(k => !k.startsWith('_')).length;
+    // A day is "complete" when both users logged every non-rest exercise.
+    const exKeys = ['plank', 'pushups', 'situps'].filter(k => dayData[k] !== null);
+    const complete = exKeys.every(k => mLog[k] !== undefined) &&
+                     exKeys.every(k => sLog[k] !== undefined);
+    const html = `
       <button class="backfill-day-btn" data-bf="${month}-${day}" onclick="renderBackfillDay(${month}, ${day})">
         <span class="backfill-day-label">Month ${month} — Day ${day}</span>
         <span class="backfill-day-date">${dateStr}</span>
@@ -1184,7 +1236,38 @@ function renderBackfill(scrollMonth, scrollDay) {
           M: ${mDone}/3 &nbsp; S: ${sDone}/3
         </span>
       </button>`;
+    return { html, complete };
   }
+
+  // Group past days into weeks of 7. A full (7-day) week collapses into a
+  // single "Week N" row — green if both users completed all 7 days, red if any
+  // were missed. The trailing partial (current) week shows its days as normal.
+  const total = Math.min(diffToday, 90);
+  let listHtml = '';
+  for (let i = 0; i < total; i += 7) {
+    const groupCount = Math.min(7, total - i);
+    const group = [];
+    for (let j = 0; j < groupCount; j++) group.push(buildDay(i + j));
+    if (groupCount === 7) {
+      const weekNum = Math.floor(i / 7) + 1;
+      const complete = group.every(g => g.complete);
+      const daysHtml = group.map(g => g.html).join('');
+      listHtml += `
+        <div class="prog-week-card prog-week-collapsed ${complete ? 'prog-complete' : 'prog-incomplete'}">
+          <div class="prog-week-header" onclick="toggleProgWeek(this)">
+            <span class="prog-week-label">Week ${weekNum}</span>
+            <div class="prog-day-meta">
+              <span class="prog-week-status">${complete ? 'All 7 complete' : 'Day(s) missed'}</span>
+              <span class="prog-week-chevron">${getSVGIcon('chevron')}</span>
+            </div>
+          </div>
+          <div class="prog-week-days" style="display:none">${daysHtml}</div>
+        </div>`;
+    } else {
+      listHtml += group.map(g => g.html).join('');
+    }
+  }
+  if (!listHtml) listHtml = '<p class="install-text">No past days to backfill yet.</p>';
 
   setView(`
     <div class="main-screen">
@@ -1198,16 +1281,24 @@ function renderBackfill(scrollMonth, scrollDay) {
         </div>
       </header>
       <main class="main-content">
-        <div class="backfill-list">${dayOptions}</div>
+        <div class="backfill-list">${listHtml}</div>
       </main>
     </div>
   `);
 
-  // Returning from a day's backfill: scroll back to that day in the list.
+  // Returning from a day's backfill: expand its week (if collapsed) and scroll
+  // back to that day in the list.
   if (scrollMonth) {
     requestAnimationFrame(() => {
       const btn = document.querySelector(`.backfill-day-btn[data-bf="${scrollMonth}-${scrollDay}"]`);
-      if (btn && btn.scrollIntoView) btn.scrollIntoView({ block: 'center' });
+      if (!btn) return;
+      const week = btn.closest('.prog-week-card');
+      if (week && week.classList.contains('prog-week-collapsed')) {
+        week.classList.remove('prog-week-collapsed');
+        const days = week.querySelector('.prog-week-days');
+        if (days) days.style.display = '';
+      }
+      if (btn.scrollIntoView) btn.scrollIntoView({ block: 'center' });
     });
   }
 }
@@ -1272,6 +1363,9 @@ function renderBackfillDay(month, day) {
         </div>
       </header>
       <main class="main-content">
+        <button class="backfill-complete-all" onclick="backfillCompleteAll(${month}, ${day})">
+          ${getSVGIcon('tick', 16)} COMPLETE ALL
+        </button>
         ${userSections}
       </main>
     </div>
@@ -1311,6 +1405,28 @@ async function confirmBackfillLog(effortKey) {
   appData[user].logs[logKey][exercise] = { effort: effortKey, sets: 'single', breakdown: null, ts: Date.now() };
   backfillPending = null;
   document.getElementById('backfillEffortModal').style.display = 'none';
+  await saveData();
+  renderBackfillDay(month, day);
+}
+
+// Mark warm up, every (non-rest) exercise, and cool down as done for BOTH
+// users on this day in one tap. Existing exercise logs are kept as-is so a
+// previously recorded effort isn't overwritten.
+async function backfillCompleteAll(month, day) {
+  const dayData = getDayData(month, day);
+  const exKeys = ['plank', 'pushups', 'situps'];
+  const logKey = `m${month}d${day}`;
+  ['mark', 'shelley'].forEach(u => {
+    if (!appData[u].logs[logKey]) appData[u].logs[logKey] = {};
+    const log = appData[u].logs[logKey];
+    log._warmup = true;
+    log._cooldown = true;
+    exKeys.forEach(k => {
+      if (dayData[k] !== null && log[k] === undefined) {
+        log[k] = { effort: 'neutral', sets: 'single', breakdown: null, ts: Date.now() };
+      }
+    });
+  });
   await saveData();
   renderBackfillDay(month, day);
 }
