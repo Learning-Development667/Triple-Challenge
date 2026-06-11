@@ -4,7 +4,7 @@
 // ============================================================
 
 // App version — bump the patch number on every change merged to main.
-const APP_VERSION = 'v1.10.0';
+const APP_VERSION = 'v1.10.1';
 
 const EFFORTS = [
   { key: 'easy',    label: 'Easy' },
@@ -1409,23 +1409,21 @@ async function confirmBackfillLog(effortKey) {
   renderBackfillDay(month, day);
 }
 
-// Mark warm up, every (non-rest) exercise, and cool down as done for BOTH
-// users on this day in one tap. Existing exercise logs are kept as-is so a
-// previously recorded effort isn't overwritten.
+// Mark warm up, every (non-rest) exercise, and cool down as done for the
+// current user on this day in one tap. Existing exercise logs are kept as-is
+// so a previously recorded effort isn't overwritten.
 async function backfillCompleteAll(month, day) {
   const dayData = getDayData(month, day);
   const exKeys = ['plank', 'pushups', 'situps'];
   const logKey = `m${month}d${day}`;
-  ['mark', 'shelley'].forEach(u => {
-    if (!appData[u].logs[logKey]) appData[u].logs[logKey] = {};
-    const log = appData[u].logs[logKey];
-    log._warmup = true;
-    log._cooldown = true;
-    exKeys.forEach(k => {
-      if (dayData[k] !== null && log[k] === undefined) {
-        log[k] = { effort: 'neutral', sets: 'single', breakdown: null, ts: Date.now() };
-      }
-    });
+  if (!appData[currentUser].logs[logKey]) appData[currentUser].logs[logKey] = {};
+  const log = appData[currentUser].logs[logKey];
+  log._warmup = true;
+  log._cooldown = true;
+  exKeys.forEach(k => {
+    if (dayData[k] !== null && log[k] === undefined) {
+      log[k] = { effort: 'neutral', sets: 'single', breakdown: null, ts: Date.now() };
+    }
   });
   await saveData();
   renderBackfillDay(month, day);
