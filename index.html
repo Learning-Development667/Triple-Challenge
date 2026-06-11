@@ -1322,25 +1322,39 @@
   <!-- OneSignal Web SDK v16 (push notifications) -->
   <script>
     window.__osInit = 'pending';
+    window.__osErr = '';
     window.OneSignalDeferred = window.OneSignalDeferred || [];
 
-    // Load the OneSignal SDK with retries. cdn.onesignal.com is on many
-    // tracker blocklists, so it can be blocked by Safari content blockers,
-    // ad-blocking DNS (NextDNS/AdGuard/Pi-hole), or a filtering VPN — which
-    // makes it load for some users but not others. Retrying handles transient
-    // network failures; a persistent block surfaces an actionable message.
+    // Capture the real reason the SDK fails on a given device (diagnostics).
+    window.addEventListener('error', function (ev) {
+      if (ev && ev.target && ev.target.tagName === 'SCRIPT' && /onesignal/i.test(ev.target.src || '')) {
+        window.__osErr = 'script onerror: ' + ev.target.src;
+      }
+    }, true);
+    window.addEventListener('unhandledrejection', function (ev) {
+      var m = (ev && ev.reason && (ev.reason.message || ev.reason)) || '';
+      if (/onesignal|push|subscri|service ?worker/i.test(String(m))) window.__osErr = 'rejection: ' + m;
+    });
+
+    // Load the OneSignal SDK with retries. A persistent failure runs a
+    // no-cors reachability probe so we can tell "network blocked" from other
+    // failures, and records the exact error for the on-device diagnostic.
     (function loadOneSignal(attempt) {
       attempt = attempt || 1;
       var MAX = 3;
+      var url = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
       var s = document.createElement('script');
-      s.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
+      s.src = url;
       s.defer = true;
       s.onerror = function () {
         if (attempt < MAX) {
           window.__osInit = 'loading (retry ' + attempt + '/' + MAX + ')';
           setTimeout(function () { loadOneSignal(attempt + 1); }, 1500 * attempt);
         } else {
-          window.__osInit = "Couldn't reach the notifications service (cdn.onesignal.com is blocked). Turn off any ad/content blocker, private DNS, or VPN for this site, then reopen the app.";
+          window.__osInit = 'SDK failed to load after ' + MAX + ' tries';
+          fetch(url, { mode: 'no-cors', cache: 'no-store' })
+            .then(function () { window.__osErr = (window.__osErr ? window.__osErr + ' | ' : '') + 'probe: CDN reachable (no-cors ok)'; })
+            .catch(function (e) { window.__osErr = (window.__osErr ? window.__osErr + ' | ' : '') + 'probe failed: ' + ((e && e.message) || e); });
         }
       };
       document.head.appendChild(s);
@@ -1359,6 +1373,7 @@
         window.__osInit = 'ok';
       } catch (e) {
         window.__osInit = 'init error: ' + ((e && e.message) || e);
+        window.__osErr = 'init threw: ' + ((e && e.stack) || (e && e.message) || e);
       }
     });
   </script>
