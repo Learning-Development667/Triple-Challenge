@@ -4,7 +4,7 @@
 // ============================================================
 
 // App version — bump the patch number on every change merged to main.
-const APP_VERSION = 'v1.6.0';
+const APP_VERSION = 'v1.7.0';
 
 const EFFORTS = [
   { key: 'easy',    label: 'Easy' },
@@ -217,7 +217,7 @@ function renderUserSelect() {
   };
 
   setView(`
-    <div class="user-select-screen">
+    <div class="user-select-screen has-bg">
       <div class="logo-block">
         <h1 class="app-title">TRIPLE<br>CHALLENGE</h1>
         <p class="app-sub">30 DAYS · 3 EXERCISES · 2 LEGENDS</p>
@@ -544,7 +544,7 @@ function renderToday() {
   const partnerSummary = getPartnerSummary(partner);
 
   setView(`
-    <div class="main-screen">
+    <div class="main-screen screen-daily">
       <header class="app-header">
         <div class="header-left">
           <button class="back-btn" onclick="renderUserSelect()">${getSVGIcon('back', 18)}</button>
@@ -978,7 +978,7 @@ function renderProgress() {
   }).join('');
 
   setView(`
-    <div class="main-screen">
+    <div class="main-screen screen-progress">
       <header class="app-header">
         <div class="header-left">
           <button class="back-btn" onclick="renderToday()">${getSVGIcon('back', 18)}</button>
