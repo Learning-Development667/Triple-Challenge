@@ -1320,11 +1320,32 @@
   <script src="./config.js"></script>
 
   <!-- OneSignal Web SDK v16 (push notifications) -->
-  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer
-          onerror="window.__osInit = 'SDK script failed to load'"></script>
   <script>
     window.__osInit = 'pending';
     window.OneSignalDeferred = window.OneSignalDeferred || [];
+
+    // Load the OneSignal SDK with retries. cdn.onesignal.com is on many
+    // tracker blocklists, so it can be blocked by Safari content blockers,
+    // ad-blocking DNS (NextDNS/AdGuard/Pi-hole), or a filtering VPN — which
+    // makes it load for some users but not others. Retrying handles transient
+    // network failures; a persistent block surfaces an actionable message.
+    (function loadOneSignal(attempt) {
+      attempt = attempt || 1;
+      var MAX = 3;
+      var s = document.createElement('script');
+      s.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
+      s.defer = true;
+      s.onerror = function () {
+        if (attempt < MAX) {
+          window.__osInit = 'loading (retry ' + attempt + '/' + MAX + ')';
+          setTimeout(function () { loadOneSignal(attempt + 1); }, 1500 * attempt);
+        } else {
+          window.__osInit = "Couldn't reach the notifications service (cdn.onesignal.com is blocked). Turn off any ad/content blocker, private DNS, or VPN for this site, then reopen the app.";
+        }
+      };
+      document.head.appendChild(s);
+    })();
+
     OneSignalDeferred.push(async function (OneSignal) {
       try {
         await OneSignal.init({
