@@ -1,0 +1,31 @@
+name: Daily Email
+
+# Sends the morning Triple Challenge email to Mark and Shelley.
+on:
+  schedule:
+    # 06:30 UTC every day. NOTE: GitHub may delay scheduled runs under load,
+    # and schedules only run from the default branch.
+    - cron: '30 6 * * *'
+  workflow_dispatch:
+    # Allows a manual run (Actions tab -> Daily Email -> Run workflow) for testing.
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Send daily email
+        env:
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          # Optional. Must be a SendGrid-verified sender. Falls back to MARK_EMAIL.
+          SENDGRID_FROM_EMAIL: ${{ secrets.SENDGRID_FROM_EMAIL }}
+          MARK_EMAIL: ${{ secrets.MARK_EMAIL }}
+          SHELLEY_EMAIL: ${{ secrets.SHELLEY_EMAIL }}
+        run: node .github/scripts/daily-email.js
