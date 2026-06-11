@@ -257,16 +257,21 @@
     .header-left { display: flex; align-items: center; gap: 12px; }
 
     .back-btn {
-      width: 38px; height: 38px;
+      width: 40px; height: 40px;
+      flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
+      -webkit-appearance: none; appearance: none;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--r-sm);
-      color: var(--grey);
-      font-size: 13px;
-      transition: color 0.15s, border-color 0.15s;
+      color: var(--accent);
+      line-height: 0;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
     }
-    .back-btn:active { color: var(--white); border-color: var(--red); }
+    .back-btn:active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+    }
 
     .header-title { display: flex; flex-direction: column; gap: 1px; }
 
@@ -345,9 +350,36 @@
       position: relative;
       width: 60px; height: 60px;
       flex-shrink: 0;
+      --ringArcColor: #00A3FF;
     }
 
-    /* All exercises complete — gold glow on the ring. */
+    /* Rotating laser arc travelling around the outside edge of the ring. */
+    @property --ringAngle {
+      syntax: '<angle>';
+      initial-value: 0deg;
+      inherits: false;
+    }
+    @keyframes ring-arc-spin { to { --ringAngle: 360deg; } }
+
+    .day-progress-ring::after {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: 50%;
+      background: conic-gradient(from var(--ringAngle),
+        rgba(0,0,0,0) 0deg,
+        rgba(0,0,0,0) 16deg,
+        var(--ringArcColor) 36deg,
+        rgba(0,0,0,0) 56deg,
+        rgba(0,0,0,0) 360deg);
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
+              mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
+      pointer-events: none;
+      animation: ring-arc-spin 3s linear infinite;
+    }
+
+    /* All exercises complete — ring + arc turn gold, with a gold glow. */
+    .day-progress-ring.ring-complete { --ringArcColor: #F5A623; }
     .day-progress-ring.ring-complete {
       animation: ring-gold-glow 2.4s ease-in-out infinite;
     }
@@ -952,11 +984,50 @@
     }
 
     .prog-day-card {
+      position: relative;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--r-md);
       overflow: hidden;
       margin-bottom: 10px;
+    }
+
+    /* Rotating laser arc borders on the day rows. Separate @property angle
+       customs per colour so the green / red / blue arcs never conflict. */
+    @property --angGreen { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+    @property --angRed   { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+    @keyframes prog-spin-green { to { --angGreen: 360deg; } }
+    @keyframes prog-spin-red   { to { --angRed: 360deg; } }
+
+    .prog-day-card.prog-complete::before,
+    .prog-day-card.prog-incomplete::before,
+    .prog-day-card.prog-today::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      padding: 1.5px;
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+              mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+              mask-composite: exclude;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .prog-day-card.prog-complete::before {
+      background: conic-gradient(from var(--angGreen),
+        rgba(0,0,0,0) 0deg, rgba(0,0,0,0) 18deg, #27ae60 42deg, rgba(0,0,0,0) 66deg, rgba(0,0,0,0) 360deg);
+      animation: prog-spin-green 3.2s linear infinite;
+    }
+    .prog-day-card.prog-incomplete::before {
+      background: conic-gradient(from var(--angRed),
+        rgba(0,0,0,0) 0deg, rgba(0,0,0,0) 18deg, #e53935 42deg, rgba(0,0,0,0) 66deg, rgba(0,0,0,0) 360deg);
+      animation: prog-spin-red 3.2s linear infinite;
+    }
+    .prog-day-card.prog-today::before {
+      background: conic-gradient(from var(--ucAngle),
+        rgba(0,0,0,0) 0deg, rgba(0,0,0,0) 18deg, #00A3FF 42deg, rgba(0,0,0,0) 66deg, rgba(0,0,0,0) 360deg);
+      animation: user-card-arc 3.2s linear infinite;
     }
 
     .prog-day-card.prog-today {
