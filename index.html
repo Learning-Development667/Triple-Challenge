@@ -125,6 +125,24 @@
       overflow-y: auto;
     }
 
+    /* ── PER-SCREEN BACKGROUND IMAGES ─────────────────────── */
+    /* Layers, top to bottom: dot grid · navy overlay · the image (cover). */
+    .user-select-screen.has-bg,
+    .main-screen.screen-daily,
+    .main-screen.screen-progress {
+      background-color: var(--bg);
+      background-image:
+        radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1.4px),
+        linear-gradient(rgba(19,41,75,0.75), rgba(19,41,75,0.75)),
+        var(--screen-bg);
+      background-size: 22px 22px, cover, cover;
+      background-position: -11px -11px, center, center;
+      background-repeat: repeat, no-repeat, no-repeat;
+    }
+    .user-select-screen.has-bg    { --screen-bg: url('./images/home-bg.png'); }
+    .main-screen.screen-daily     { --screen-bg: url('./images/daily-bg.png'); }
+    .main-screen.screen-progress  { --screen-bg: url('./images/progress-bg.png'); }
+
     .logo-block {
       text-align: center;
       margin-bottom: 48px;
