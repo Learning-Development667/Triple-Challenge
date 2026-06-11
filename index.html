@@ -120,7 +120,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 40px 24px calc(40px + var(--safe-bot));
+      padding: calc(60px + var(--safe-top)) 24px calc(40px + var(--safe-bot));
       background: transparent;
       overflow-y: auto;
     }
@@ -156,24 +156,56 @@
       max-width: 380px;
     }
 
+    /* @property lets the conic-gradient angle animate smoothly (no jumps). */
+    @property --ucAngle {
+      syntax: '<angle>';
+      initial-value: 0deg;
+      inherits: false;
+    }
+
     .user-card {
+      position: relative;
       flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
       background: var(--surface);
-      border: 1px solid var(--border);
+      border: 1px solid rgba(0,163,255,0.6);
       border-radius: var(--r-lg);
       overflow: hidden;
-      transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+      transition: transform 0.15s;
       padding: 0;
-      box-shadow: var(--shadow), 0 0 0 1px rgba(0,163,255,0.10), 0 0 26px rgba(0,163,255,0.12);
+      animation: user-card-breathe 3.6s ease-in-out infinite;
     }
 
-    .user-card:active {
-      transform: scale(0.97);
-      border-color: var(--accent);
-      box-shadow: var(--shadow), 0 0 0 1px rgba(0,163,255,0.5), 0 0 34px rgba(0,163,255,0.28);
+    .user-card:active { transform: scale(0.97); }
+
+    /* Rotating electric-blue arc: a conic-gradient masked to a thin edge strip
+       so only the arc segment shows — a subtle futuristic scanning border. */
+    .user-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      padding: 2px;
+      background: conic-gradient(from var(--ucAngle),
+        rgba(0,163,255,0) 0deg,
+        rgba(0,163,255,0) 14deg,
+        #00A3FF 40deg,
+        rgba(0,163,255,0) 66deg,
+        rgba(0,163,255,0) 360deg);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+              mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+              mask-composite: exclude;
+      pointer-events: none;
+      animation: user-card-arc 3.6s linear infinite;
+    }
+
+    @keyframes user-card-arc { to { --ucAngle: 360deg; } }
+    @keyframes user-card-breathe {
+      0%, 100% { box-shadow: var(--shadow), 0 0 0 1px rgba(0,163,255,0.18), 0 0 16px rgba(0,163,255,0.10); }
+      50%      { box-shadow: var(--shadow), 0 0 0 1px rgba(0,163,255,0.40), 0 0 30px rgba(0,163,255,0.24); }
     }
 
     .photo-wrap {
@@ -506,7 +538,13 @@
     }
 
     .exercise-card.done { border-color: rgba(52,211,153,0.4); }
-    .exercise-card.rest { opacity: 0.4; }
+    /* Rest day — muted, greyed out, and non-interactive. */
+    .exercise-card.rest {
+      opacity: 0.4;
+      filter: grayscale(0.75);
+      pointer-events: none;
+      box-shadow: none;
+    }
 
     .ex-main {
       display: flex;
@@ -619,23 +657,27 @@
     .form-guide-toggle {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.15em;
-      color: var(--grey);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      color: var(--accent);
       text-transform: uppercase;
       width: 100%;
-      padding: 0;
-      transition: color 0.15s;
+      padding: 10px 14px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(0,163,255,0.4);
+      border-radius: var(--r-sm);
+      transition: background 0.15s, border-color 0.15s;
     }
-    .form-guide-toggle:active { color: var(--white); }
+    .form-guide-toggle:active { background: rgba(0,163,255,0.22); border-color: var(--accent); }
 
     .fg-chevron {
       margin-left: auto;
       display: flex;
       transition: transform 0.2s;
-      color: var(--grey2);
+      color: var(--accent);
     }
 
     .form-guide-body {
