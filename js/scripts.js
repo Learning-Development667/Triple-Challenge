@@ -4,7 +4,7 @@
 // ============================================================
 
 // App version — bump the patch number on every change merged to main.
-const APP_VERSION = 'v1.5.0';
+const APP_VERSION = 'v1.5.1';
 
 const EFFORTS = [
   { key: 'easy',    label: 'Easy' },
@@ -1021,7 +1021,7 @@ function renderSettings() {
 //  BACKFILL SCREEN
 // ============================================================
 
-function renderBackfill() {
+function renderBackfill(scrollMonth, scrollDay) {
   // Only show past days (days 1-7 for now, i.e. before today)
   const today = new Date(); today.setHours(0,0,0,0);
   const start = new Date(CHALLENGE_START); start.setHours(0,0,0,0);
@@ -1037,7 +1037,7 @@ function renderBackfill() {
     const mDone = Object.keys(appData.mark.logs[logKey] || {}).filter(k => !k.startsWith('_')).length;
     const sDone = Object.keys(appData.shelley.logs[logKey] || {}).filter(k => !k.startsWith('_')).length;
     dayOptions += `
-      <button class="backfill-day-btn" onclick="renderBackfillDay(${month}, ${day})">
+      <button class="backfill-day-btn" data-bf="${month}-${day}" onclick="renderBackfillDay(${month}, ${day})">
         <span class="backfill-day-label">Month ${month} — Day ${day}</span>
         <span class="backfill-day-date">${dateStr}</span>
         <span class="backfill-day-status">
@@ -1062,6 +1062,14 @@ function renderBackfill() {
       </main>
     </div>
   `);
+
+  // Returning from a day's backfill: scroll back to that day in the list.
+  if (scrollMonth) {
+    requestAnimationFrame(() => {
+      const btn = document.querySelector(`.backfill-day-btn[data-bf="${scrollMonth}-${scrollDay}"]`);
+      if (btn && btn.scrollIntoView) btn.scrollIntoView({ block: 'center' });
+    });
+  }
 }
 
 function renderBackfillDay(month, day) {
@@ -1116,7 +1124,7 @@ function renderBackfillDay(month, day) {
     <div class="main-screen">
       <header class="app-header">
         <div class="header-left">
-          <button class="back-btn" onclick="renderBackfill()">${getSVGIcon('back', 18)}</button>
+          <button class="back-btn" onclick="renderBackfill(${month}, ${day})">${getSVGIcon('back', 18)}</button>
           <div class="header-title">
             <span class="header-user">DAY ${day}</span>
             <span class="header-sub">MONTH ${month} — BACKFILL</span>
