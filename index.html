@@ -184,7 +184,8 @@
        so only the arc segment shows — a subtle futuristic scanning border. */
     .user-card::before,
     .day-header::before,
-    .routine-section::before {
+    .routine-section::before,
+    .partner-strip::before {
       content: '';
       position: absolute;
       inset: 0;
@@ -775,6 +776,7 @@
 
     /* ── PARTNER STRIP ────────────────────────────────────── */
     .partner-strip {
+      position: relative;
       display: flex;
       align-items: center;
       gap: 12px;
@@ -782,6 +784,7 @@
       border: 1px solid var(--border);
       border-radius: var(--r-md);
       padding: 14px 18px;
+      animation: user-card-breathe 3.6s ease-in-out infinite;
     }
 
     .app-version {
