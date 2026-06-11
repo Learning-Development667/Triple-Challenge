@@ -4,7 +4,7 @@
 // ============================================================
 
 // App version — bump the patch number on every change merged to main.
-const APP_VERSION = 'v1.8.0';
+const APP_VERSION = 'v1.9.0';
 
 const EFFORTS = [
   { key: 'easy',    label: 'Easy' },
@@ -498,11 +498,8 @@ function renderToday() {
       if (isRest) {
         return `
           <div class="exercise-card rest">
-            <div class="ex-icon">${getSVGIcon('rest')}</div>
-            <div class="ex-info">
-              <div class="ex-label">${ex.label}</div>
-              <div class="ex-target rest-label">REST DAY</div>
-            </div>
+            <div class="rest-ex-name">${ex.label}</div>
+            <div class="rest-day-text">Rest Day</div>
           </div>`;
       }
 
