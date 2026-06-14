@@ -579,9 +579,14 @@
       opacity: 0.3;
     }
 
-    /* Locked Exercises section (until warm up is done) */
-    .routine-section.section-locked .routine-header { cursor: default; }
-    .routine-section.section-locked .log-btn { pointer-events: none; }
+    /* Locked Exercises section — the accordion still opens, but the LOG
+       buttons are disabled until the warm up is marked done. */
+    .log-btn:disabled {
+      opacity: 0.4;
+      box-shadow: none;
+      cursor: default;
+      pointer-events: none;
+    }
 
     .routine-header {
       display: flex;
