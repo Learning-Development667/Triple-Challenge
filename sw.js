@@ -1,7 +1,7 @@
 // Triple Challenge — Service Worker
 // Network-first: always fetch fresh from the network, fall back to cache only
 // when the network is unavailable (offline).
-const CACHE = 'triple-challenge-v22';
+const CACHE = 'triple-challenge-v23';
 
 // Activate the new service worker immediately, without waiting for old tabs.
 self.addEventListener('install', () => self.skipWaiting());

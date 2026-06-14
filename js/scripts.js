@@ -4,7 +4,7 @@
 // ============================================================
 
 // App version — bump the patch number on every change merged to main.
-const APP_VERSION = 'v1.10.2';
+const APP_VERSION = 'v1.11.0';
 
 const EFFORTS = [
   { key: 'easy',    label: 'Easy' },
@@ -386,38 +386,33 @@ function buildWarmupSection(warmUp, warmupDone) {
     `;
 }
 
-// Exercises section — locked (no toggle, dimmed, "Warm up first") until the
-// warm up is marked done, then it unlocks.
+// Exercises section. The accordion always expands freely, but the LOG buttons
+// stay disabled until the warm up is marked done (a "Warm up first" hint shows
+// in the header while locked).
 function buildExercisesSection(exerciseCards, warmupDone) {
   const locked = !warmupDone;
   return `
-      <div class="routine-section ${locked ? 'routine-locked section-locked' : ''}" id="exercises-section">
-        <div class="routine-header" ${locked ? '' : 'onclick="toggleSection(this)"'}>
+      <div class="routine-section" id="exercises-section">
+        <div class="routine-header" onclick="toggleSection(this)">
           <div class="routine-title-row">
             <span class="routine-icon">${getSVGIcon('dumbbell')}</span>
             <span class="routine-title">EXERCISES</span>
-            ${locked ? '' : `<span class="section-chevron">${getSVGIcon('chevron')}</span>`}
+            <span class="section-chevron">${getSVGIcon('chevron')}</span>
           </div>
-          ${locked ? `<span class="routine-locked-label">${getSVGIcon('lock', 13)} Warm up first</span>` : ''}
+          ${locked ? `<span class="routine-locked-label" id="ex-lock-label">${getSVGIcon('lock', 13)} Warm up first</span>` : ''}
         </div>
         <div class="routine-items exercises-list" style="display:none">${exerciseCards}</div>
       </div>`;
 }
 
-// Unlock the exercises section in place (keeps the already-rendered cards).
+// Enable the Exercises LOG buttons in place once the warm up is done (keeps the
+// already-rendered cards and the section's current open/closed state).
 function unlockExercises() {
   const sec = document.getElementById('exercises-section');
   if (!sec) return;
-  sec.classList.remove('routine-locked', 'section-locked');
-  const header = sec.querySelector('.routine-header');
-  if (!header) return;
-  header.setAttribute('onclick', 'toggleSection(this)');
-  const lockedLabel = header.querySelector('.routine-locked-label');
-  if (lockedLabel) lockedLabel.remove();
-  const titleRow = header.querySelector('.routine-title-row');
-  if (titleRow && !titleRow.querySelector('.section-chevron')) {
-    titleRow.insertAdjacentHTML('beforeend', `<span class="section-chevron">${getSVGIcon('chevron')}</span>`);
-  }
+  sec.querySelectorAll('.log-btn').forEach(b => { b.disabled = false; });
+  const lockLabel = sec.querySelector('#ex-lock-label');
+  if (lockLabel) lockLabel.remove();
 }
 
 function buildCooldownSection(coolDown, todayLog, canLogCooldown) {
@@ -591,7 +586,7 @@ function renderToday() {
             <div class="ex-action">
               ${done
                 ? `<div class="done-tick">${getSVGIcon('tick')}</div>`
-                : `<button class="log-btn" data-ex="${ex.key}" onclick="openEffortPicker(${month}, ${day}, '${ex.key}')">LOG</button>`
+                : `<button class="log-btn" data-ex="${ex.key}" ${warmupDone ? '' : 'disabled'} onclick="openEffortPicker(${month}, ${day}, '${ex.key}')">LOG</button>`
               }
             </div>
           </div>
